@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TempGo - Monitoreo Inteligente de Conservación Térmica</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="light-theme">
+
+  <!-- ENCABEZADO GLOBAL -->
+  <header class="main-header">
+    <button id="btn-back" class="nav-back hidden" onclick="navigateBack()">←</button>
+    <div id="header-code" class="device-code-badge hidden">COD: <span class="active-code">9NL47</span></div>
+    <div class="logo">Temp<span>Go</span></div>
+  </header>
+
+  <main class="container">
+
+    <!-- PANTALLA 1: LANDING PAGE -->
+    <section id="screen-landing" class="screen active">
+      <div class="landing-content">
+        <div class="landing-text">
+          <h1>Tus productos.<br>Tu temperatura.<br>Tu control.</h1>
+          <p>Monitorea las condiciones de almacenamiento de manera rápida y sencilla.</p>
+          <button class="btn-primary" onclick="openLoginModal()">ACCEDER</button>
+        </div>
+        <div class="landing-hero-icon">
+          <div class="snowflake-circle">
+            <span class="snowflake-icon">❄️</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODAL DE LOGIN / INICIO DE SESIÓN -->
+    <div id="modal-login" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="logo modal-logo">Temp<span>Go</span></div>
+        <h2>CÓDIGO DEL PRODUCTO</h2>
+        <input type="text" id="input-device-code" placeholder="Ej. 9NL47" value="9NL47">
+        <button class="btn-primary btn-full" onclick="connectDevice()">INICIAR</button>
+      </div>
+    </div>
+
+    <!-- PANTALLA 2: CONFIGURACIÓN Y SELECCIÓN DE PRODUCTO -->
+    <section id="screen-setup" class="screen hidden">
+      <div class="setup-grid">
+        <div class="setup-main">
+          <h2>TIPO DE PRODUCTO</h2>
+          <div class="product-cards">
+            <div class="product-card selected" onclick="selectProduct('refrigerados', this)">
+              <img src="https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=400&q=80" alt="Productos Frescos">
+              <span>PRODUCTOS FRESCOS</span>
+            </div>
+            <div class="product-card" onclick="selectProduct('congelados', this)">
+              <img src="https://images.unsplash.com/photo-1544025162-d76694265947?w=400&q=80" alt="Productos Congelados">
+              <span>PRODUCTOS CONGELADOS</span>
+            </div>
+            <div class="product-card" onclick="selectProduct('frutas', this)">
+              <img src="https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&q=80" alt="Frutas y Verduras">
+              <span>FRUTAS Y VERDURAS</span>
+            </div>
+          </div>
+
+          <div class="setup-sub-cards">
+            <div class="card status-box">
+              <h3>ENERGÍA</h3>
+              <div class="power-status">
+                <span class="power-icon">⚡</span>
+                <div class="power-labels">
+                  <span class="status-indicator active">ENCENDIDO <small class="dot yellow"></small></span>
+                  <span class="status-indicator">APAGADO <small class="dot grey"></small></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card ideal-temp-box">
+              <h3>TEMPERATURA IDEAL</h3>
+              <div class="temp-display-ideal">
+                <span class="icon">🌡️</span>
+                <span id="ideal-temp-range" class="temp-range-val">0°C - 4°C</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="setup-sidebar card">
+          <div class="sidebar-code">
+            <h3>CODIGO:</h3>
+            <span class="code-value active-code">9NL47</span>
+            <button class="btn-secondary" onclick="copyCode()">COPIAR</button>
+          </div>
+
+          <div class="theme-toggle-container">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar Tema">
+              <span id="theme-icon">🌙</span>
+            </button>
+          </div>
+
+          <button class="btn-accent btn-full" onclick="goToDashboard()">LISTO!!</button>
+        </aside>
+      </div>
+    </section>
+
+    <!-- PANTALLA 3: DASHBOARD DE MONITOREO EN TIEMPO REAL -->
+    <section id="screen-dashboard" class="screen hidden">
+      <div class="dashboard-grid">
+        
+        <!-- Columna Izquierda -->
+        <div class="dash-col dash-left">
+          <div class="card dash-card">
+            <h3>ENERGIA</h3>
+            <div class="dash-row">
+              <span class="power-icon-large">⚡</span>
+              <div class="dash-indicators">
+                <span class="ind-line">ENCENDIDO <span class="dot yellow"></span></span>
+                <span class="ind-line muted">APAGADO <span class="dot grey"></span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dash-card">
+            <h3>ESTADO</h3>
+            <div class="dash-row">
+              <span class="signal-icon">📶</span>
+              <div class="dash-indicators">
+                <span id="st-optimo" class="ind-line">OPTIMO <span class="dot yellow"></span></span>
+                <span id="st-alerta" class="ind-line muted">ALERTA <span class="dot grey"></span></span>
+                <span id="st-peligro" class="ind-line muted">PELIGRO <span class="dot grey"></span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dash-card">
+            <h3>TEMPERATURA</h3>
+            <div class="dash-row temp-live-row">
+              <span class="therm-icon">🌡️</span>
+              <span id="live-temp-val" class="live-temp-text">3°C</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna Derecha -->
+        <div class="dash-col dash-right">
+          <div class="card dash-card control-card">
+            <h3>CONTROL</h3>
+            <div class="range-bar-container">
+              <span class="range-min" id="range-min-lbl">-10°C</span>
+              <div class="range-bar">
+                <div class="range-fill" id="range-fill-bar"></div>
+              </div>
+              <span class="range-max" id="range-max-lbl">10°C</span>
+            </div>
+            <div class="range-legend">
+              <span class="leg-item"><small class="dot dark-blue"></small> &lt; <span id="leg-min-val">-1°C</span> 🥶</span>
+              <span class="leg-item"><small class="dot light-blue"></small> <span id="leg-ideal-val">0 → 4°C</span> 👍</span>
+              <span class="leg-item"><small class="dot orange"></small> &gt; <span id="leg-max-val">5°C</span> 🔥</span>
+            </div>
+          </div>
+
+          <div class="dash-bottom-row">
+            <div class="card dash-card alarm-card">
+              <h3>ALARMA</h3>
+              <div class="alarm-circle">
+                <span id="alarm-count">0</span>
+                <span class="bell-icon">🔔</span>
+              </div>
+              <p>PRODUCTO FUERA DEL RANGO</p>
+            </div>
+
+            <div class="card dash-card product-badge-card">
+              <h3>TIPO DE PRODUCTO</h3>
+              <div class="selected-product-info">
+                <h4 id="dash-product-name">MARINO</h4>
+                <img id="dash-product-img" src="https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=200&q=80" alt="Producto Seleccionado">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
