@@ -8,10 +8,18 @@ import { Calendar } from 'primereact/calendar';
 import { Card } from 'primereact/card';
 import { Message } from 'primereact/message';
 
+const API_BASE = 'http://127.0.0.1:5000/api';
+
 const categories = {
-  refrigerados: { name: 'PRODUCTOS REFRIGERADOS', ideal: '0°C - 4°C', min: '-10°C', max: '10°C', low: '-1°C', idealLegend: '0 → 4°C', high: '5°C', temp: 3, food: 'Atún', image: '/img/imagen1.jpeg', endpoint: 'alimentos_refrigerados' },
-  congelados: { name: 'PRODUCTOS CONGELADOS', ideal: '-22°C - -16°C', min: '-30°C', max: '-10°C', low: '-23°C', idealLegend: '-22 → -16°C', high: '-15°C', temp: -19, food: 'Pollo', image: '/img/imagen2.jpeg', endpoint: 'alimentos_congelados' },
-  frutas: { name: 'FRUTAS Y VERDURAS', ideal: '8°C - 12°C', min: '0°C', max: '20°C', low: '7°C', idealLegend: '8 → 12°C', high: '13°C', temp: 9, food: 'Fresa', image: '/img/imagen3.jpeg', endpoint: 'alimentos_verduras' }
+  refrigerados: { name: 'PRODUCTOS REFRIGERADOS', ideal: '0°C - 4°C', min: '-10°C', max: '10°C', low: '-1°C', idealLegend: '0 → 4°C', high: '5°C', temp: 3, food: 'Atún', image: '/img/imagen1.jpeg', endpoint: 'refrigerados' },
+  congelados: { name: 'PRODUCTOS CONGELADOS', ideal: '-22°C - -16°C', min: '-30°C', max: '-10°C', low: '-23°C', idealLegend: '-22 → -16°C', high: '-15°C', temp: -19, food: 'Pollo', image: '/img/imagen2.jpeg', endpoint: 'congelados' },
+  frutas: { name: 'FRUTAS Y VERDURAS', ideal: '8°C - 12°C', min: '0°C', max: '20°C', low: '7°C', idealLegend: '8 → 12°C', high: '13°C', temp: 9, food: 'Fresa', image: '/img/imagen3.jpeg', endpoint: 'verduras' }
+};
+
+const apiRanges = {
+  congelados: '-22°C a -18°C',
+  refrigerados: '0°C a 4°C',
+  frutas: '8°C a 12°C'
 };
 
 function categorize(food) {
@@ -38,30 +46,59 @@ export default function App() {
   const [busy, setBusy] = useState(false);
 
   const info = categories[category];
+
+  const formatDateForApi = (value) => {
+    if (!value) return new Date().toLocaleDateString('es-ES');
+    const d = new Date(value);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatApiError = (response, data, fallback) => {
+    const statusText = response && response.status ? `HTTP ${response.status}` : 'HTTP desconocido';
+    const backendMessage = data && (data.message || data.error || data.detail);
+    return backendMessage ? `${statusText}: ${backendMessage}` : `${statusText}. ${fallback}`;
+  };
+
   const submitFood = async (event) => {
     event.preventDefault();
     const selected = categorize(food);
     setCategory(selected);
     setBusy(true);
     setMessage(null);
-    const endpoint = categories[selected].endpoint;
-    const payload = { alimento_especifico: food.trim(), temperatura, rango: String(range).padStart(2, '0') };
+
     try {
-      let response = await fetch(`https://prueba2-gq90.onrender.com/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (response.status === 404) response = await fetch('https://prueba2-gq90.onrender.com/alimentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const response = await fetch(`${API_BASE}/${categories[selected].endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          alimento_especifico: food.trim(),
+          temperatura: Number(temperature),
+          rango: apiRanges[selected],
+          fecha_creacion: formatDateForApi(date)
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(formatApiError(response, data, 'No se pudo guardar el alimento en la API.'));
+      }
+
       setMessage({ severity: 'success', text: `“${food}” se registró correctamente.` });
-    } catch {
-      setMessage({ severity: 'warn', text: 'No se pudo confirmar el registro en el servidor. Puedes continuar, pero el dato no se guardó localmente.' });
+      setScreen('setup');
+    } catch (error) {
+      setMessage({ severity: 'warn', text: error.message || 'No se pudo guardar el alimento en la API.' });
     } finally {
       setBusy(false);
-      setScreen('setup');
     }
   };
 
   const back = () => setScreen(({ dashboard: 'setup', setup: 'food', food: 'login', register: 'login' })[screen] || 'login');
 
-  const handleRegister = (event) => {
+  const handleRegister = async (event) => {
     event.preventDefault();
 
     if (!registerEmail.trim() || !registerPassword || !confirmPassword) {
@@ -74,13 +111,64 @@ export default function App() {
       return;
     }
 
-    setEmail(registerEmail.trim());
-    setPassword(registerPassword);
-    setRegisterEmail('');
-    setRegisterPassword('');
-    setConfirmPassword('');
-    setMessage({ severity: 'success', text: 'Registro exitoso. Ya puedes iniciar sesión.' });
-    setScreen('login');
+    try {
+      const response = await fetch(`${API_BASE}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: (registerEmail.split('@')[0] || 'Usuario').trim(),
+          email: registerEmail.trim(),
+          password: registerPassword,
+          edad: 25
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(formatApiError(response, data, 'No se pudo registrar el usuario.'));
+      }
+
+      localStorage.setItem('tempgo_token', data.token || '');
+      setEmail(registerEmail.trim());
+      setPassword(registerPassword);
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setConfirmPassword('');
+      setMessage({ severity: 'success', text: 'Registro exitoso. Ya puedes iniciar sesión.' });
+      setScreen('login');
+    } catch (error) {
+      setMessage({ severity: 'warn', text: error.message || 'No se pudo registrar el usuario.' });
+    }
+  };
+
+  const handleLogin = async (event) => {
+    event.preventDefault();
+
+    if (!email.trim() || !password) {
+      setMessage({ severity: 'warn', text: 'Ingresa tu correo y contraseña.' });
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(formatApiError(response, data, 'Credenciales inválidas.'));
+      }
+
+      localStorage.setItem('tempgo_token', data.token || '');
+      setMessage({ severity: 'success', text: 'Inicio de sesión correcto.' });
+      setScreen('food');
+    } catch (error) {
+      setMessage({ severity: 'warn', text: error.message || 'Credenciales inválidas.' });
+    }
   };
 
   return <div className={`app ${theme}`}>
@@ -94,7 +182,7 @@ export default function App() {
         <div><h1>Tus productos.<br />Tu temperatura.<br />Tu control.</h1><p>Monitorea las condiciones de almacenamiento de manera rápida y sencilla en tu contenedor térmico.</p></div>
         <Card className="form-card"><h2>1. Acceder / Login</h2>
           {message && <Message severity={message.severity} text={message.text} />}
-          <form onSubmit={e => { e.preventDefault(); setScreen('food'); }}>
+          <form onSubmit={handleLogin}>
             <label>Correo<InputText type="email" value={email} onChange={e => setEmail(e.target.value)} required /></label>
             <label>Contraseña<Password value={password} onChange={e => setPassword(e.target.value)} feedback={false} toggleMask required /></label>
             <Button type="submit" label="INGRESAR" className="full" />
