@@ -9,11 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vite": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "primereact": "latest",
-    "primeicons": "latest"
+    "vite": "^5.4.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "primereact": "^9.6.5",
+    "primeicons": "^6.0.1"
   },
   "devDependencies": {}
 }

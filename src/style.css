@@ -17,7 +17,23 @@ h1 { color:#00a8e8; font-size:clamp(2rem,5vw,3rem); line-height:1.15; } p { line
 .p-card { border-radius:18px; box-shadow:0 8px 24px #0001; margin-bottom:16px; }.dark .p-card { background:#134b66; color:white; }
 form, label { display:flex; flex-direction:column; gap:9px; } form { gap:18px; margin-top:20px; } label { font-weight:700; }
 .p-inputtext, .p-password, .p-inputnumber, .p-calendar { width:100%; }.p-password input, .p-inputnumber input, .p-calendar input { width:100%; }
-.full { width:100%; }.setup-grid { display:grid; grid-template-columns:2.5fr 1fr; gap:24px; }.categories { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:18px 0; }
+.full { width:100%; }.food-layout { display:grid; grid-template-columns:1fr 1.2fr; gap:1.5rem; width:100%; max-width:1100px; align-items:stretch; }
+.temperature-panel { min-height:100%; }
+.temperature-list { display:grid; gap:1rem; margin-top:1.1rem; }
+.temperature-item { display:flex; align-items:center; gap:1rem; padding:1rem 1rem; border-radius:18px; border:1px solid transparent; box-shadow:0 8px 20px rgba(20, 56, 88, 0.08); transition:transform .2s ease, box-shadow .2s ease; }
+.temperature-item:hover { transform:translateY(-2px); box-shadow:0 10px 22px rgba(20,56,88,0.12); }
+.temperature-item.frozen { background:linear-gradient(135deg,#edf7ff,#dfeeff); border-color:#cfe3ff; }
+.temperature-item.fresh { background:linear-gradient(135deg,#effff7,#dff7ea); border-color:#cfeee0; }
+.temperature-item.produce { background:linear-gradient(135deg,#fffaf0,#fdf0d8); border-color:#f9e4b5; }
+.info-icon { width:52px; height:52px; border-radius:16px; display:grid; place-items:center; font-size:1.7rem; color:white; flex-shrink:0; box-shadow: inset 0 2px 8px rgba(255,255,255,0.4); }
+.frozen .info-icon { background:linear-gradient(135deg,#4ab0ff,#1d8df1); }
+.fresh .info-icon { background:linear-gradient(135deg,#2ecb8f,#1aa574); }
+.produce .info-icon { background:linear-gradient(135deg,#f8ba40,#f39f1b); }
+.info-copy { display:flex; flex-direction:column; gap:0.2rem; }
+.info-copy strong { font-size:0.95rem; }
+.info-copy span { font-weight:700; color:#1f2d3d; }
+.dark .info-copy span { color:#edf7ff; }
+.setup-grid { display:grid; grid-template-columns:2.5fr 1fr; gap:24px; }.categories { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:18px 0; }
 .category { padding:10px; border:3px solid transparent; border-radius:16px; background:white; cursor:pointer; box-shadow:0 5px 16px #0001; font-weight:900; }.dark .category { background:#134b66; color:white; }.category.selected { border-color:#f5a623; }.category img { width:100%; height:110px; display:block; object-fit:cover; border-radius:10px; margin-bottom:8px; }
 .status-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }.sidebar { display:flex; flex-direction:column; gap:16px; }.sidebar .p-card { display:grid; gap:16px; place-items:center; }.code { font-size:2rem; }.dashboard { display:grid; grid-template-columns:1fr 2fr; gap:20px; }.dash-stats { display:flex; flex-direction:column; gap:14px; }.temperature { color:#f5a623; font-size:2.4rem; }.range-labels { display:flex; justify-content:space-between; }.bar { height:22px; border-radius:20px; background:#dbe4ed; margin:14px 0; overflow:hidden; }.bar div { width:45%; height:100%; margin-left:25%; background:#00a8e8; }.product-summary { display:flex; align-items:center; justify-content:space-between; }.product-summary img { width:72px; height:72px; object-fit:cover; border-radius:50%; }
-@media(max-width:760px) { .landing,.setup-grid,.dashboard { grid-template-columns:1fr; }.landing { text-align:center; }.categories,.status-grid { grid-template-columns:1fr; }.sidebar { margin-top:10px; } }
+@media(max-width:760px) { .landing,.setup-grid,.dashboard,.food-layout { grid-template-columns:1fr; }.landing { text-align:center; }.categories,.status-grid { grid-template-columns:1fr; }.sidebar { margin-top:10px; } }
