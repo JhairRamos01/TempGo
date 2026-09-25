@@ -8,7 +8,7 @@ import { Calendar } from 'primereact/calendar';
 import { Card } from 'primereact/card';
 import { Message } from 'primereact/message';
 
-const API_BASE = 'http://127.0.0.1:5000/api';
+const API_BASE = 'https://api-tempgo.onrender.com/api';
 
 const categories = {
   refrigerados: { name: 'PRODUCTOS REFRIGERADOS', ideal: '0°C - 4°C', min: '-10°C', max: '10°C', low: '-1°C', idealLegend: '0 → 4°C', high: '5°C', temp: 3, food: 'Atún', image: '/img/imagen1.jpeg', endpoint: 'refrigerados' },
