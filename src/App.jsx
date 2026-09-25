@@ -111,6 +111,7 @@ export default function App() {
       return;
     }
 
+    setBusy(true);
     try {
       const response = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
@@ -139,6 +140,8 @@ export default function App() {
       setScreen('login');
     } catch (error) {
       setMessage({ severity: 'warn', text: error.message || 'No se pudo registrar el usuario.' });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -150,6 +153,7 @@ export default function App() {
       return;
     }
 
+    setBusy(true);
     try {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
@@ -168,10 +172,19 @@ export default function App() {
       setScreen('food');
     } catch (error) {
       setMessage({ severity: 'warn', text: error.message || 'Credenciales inválidas.' });
+    } finally {
+      setBusy(false);
     }
   };
 
   return <div className={`app ${theme}`}>
+    {busy && <div className="loading-overlay" role="status" aria-live="polite" aria-label="Cargando">
+      <div className="loading-box">
+        <i className="pi pi-spin pi-spinner" aria-hidden="true" />
+        <strong>Procesando...</strong>
+        <span>Espera un momento</span>
+      </div>
+    </div>}
     <header className="topbar">
       {screen !== 'login' && <Button icon="pi pi-arrow-left" text rounded aria-label="Volver" onClick={back} />}
       {screen !== 'login' && <span className="device-code">COD: 9NL47</span>}
@@ -183,10 +196,10 @@ export default function App() {
         <Card className="form-card"><h2>1. Acceder / Login</h2>
           {message && <Message severity={message.severity} text={message.text} />}
           <form onSubmit={handleLogin}>
-            <label>Correo<InputText type="email" value={email} onChange={e => setEmail(e.target.value)} required /></label>
-            <label>Contraseña<Password value={password} onChange={e => setPassword(e.target.value)} feedback={false} toggleMask required /></label>
-            <Button type="submit" label="INGRESAR" className="full" />
-            <Button type="button" label="REGISTRARSE" className="full secondary" onClick={() => setScreen('register')} style={{ marginTop: '0.75rem' }} />
+            <label>Correo<InputText type="email" value={email} onChange={e => setEmail(e.target.value)} disabled={busy} required /></label>
+            <label>Contraseña<Password value={password} onChange={e => setPassword(e.target.value)} feedback={false} toggleMask disabled={busy} required /></label>
+            <Button type="submit" label={busy ? 'CARGANDO...' : 'INGRESAR'} className="full" disabled={busy} />
+            <Button type="button" label="REGISTRARSE" className="full secondary" onClick={() => setScreen('register')} disabled={busy} style={{ marginTop: '0.75rem' }} />
           </form>
         </Card>
       </section>}
@@ -195,11 +208,11 @@ export default function App() {
         <h2>2. Registro</h2>
         {message && <Message severity={message.severity} text={message.text} />}
         <form onSubmit={handleRegister}>
-          <label>Correo<InputText type="email" value={registerEmail} onChange={e => setRegisterEmail(e.target.value)} required /></label>
-          <label>Contraseña<Password value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} feedback={false} toggleMask required /></label>
-          <label>Confirmar contraseña<Password value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} feedback={false} toggleMask required /></label>
-          <Button type="submit" label="CREAR CUENTA" className="full" />
-          <Button type="button" label="VOLVER AL LOGIN" className="full secondary" onClick={() => setScreen('login')} style={{ marginTop: '0.75rem' }} />
+          <label>Correo<InputText type="email" value={registerEmail} onChange={e => setRegisterEmail(e.target.value)} disabled={busy} required /></label>
+          <label>Contraseña<Password value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} feedback={false} toggleMask disabled={busy} required /></label>
+          <label>Confirmar contraseña<Password value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} feedback={false} toggleMask disabled={busy} required /></label>
+          <Button type="submit" label={busy ? 'CARGANDO...' : 'CREAR CUENTA'} className="full" disabled={busy} />
+          <Button type="button" label="VOLVER AL LOGIN" className="full secondary" onClick={() => setScreen('login')} disabled={busy} style={{ marginTop: '0.75rem' }} />
         </form>
       </Card>}
 
@@ -235,10 +248,10 @@ export default function App() {
           <h2>3. Ingreso del alimento</h2>
           {message && <Message severity={message.severity} text={message.text} />}
           <form onSubmit={submitFood}>
-            <label>Alimento<InputText value={food} onChange={e => setFood(e.target.value)} required /></label>
-            <label>Temperatura (°C)<InputNumber value={temperature} onValueChange={e => setTemperature(e.value)} required /></label>
-            <label>Rango de temperatura: {range > 0 ? '+' : ''}{range}°C<Slider value={range} onChange={e => setRange(e.value)} min={-40} max={40} /></label>
-            <label>Fecha<Calendar value={date} onChange={e => setDate(e.value)} dateFormat="dd/mm/yy" showIcon required /></label>
+            <label>Alimento<InputText value={food} onChange={e => setFood(e.target.value)} disabled={busy} required /></label>
+            <label>Temperatura (°C)<InputNumber value={temperature} onValueChange={e => setTemperature(e.value)} disabled={busy} required /></label>
+            <label>Rango de temperatura: {range > 0 ? '+' : ''}{range}°C<Slider value={range} onChange={e => setRange(e.value)} disabled={busy} min={-40} max={40} /></label>
+            <label>Fecha<Calendar value={date} onChange={e => setDate(e.value)} disabled={busy} dateFormat="dd/mm/yy" showIcon required /></label>
             <Button type="submit" label={busy ? 'ENVIANDO…' : 'INGRESAR'} icon={busy ? 'pi pi-spin pi-spinner' : 'pi pi-check'} disabled={busy} className="full" /></form>
         </Card>
       </div>}
