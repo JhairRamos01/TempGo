@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
@@ -29,8 +29,22 @@ function categorize(food) {
   return 'congelados';
 }
 
+const routes = {
+  '/login': 'login',
+  '/registro': 'register',
+  '/alimentos': 'food',
+  '/configuracion': 'setup',
+  '/dashboard': 'dashboard'
+};
+
+const screenPaths = Object.fromEntries(Object.entries(routes).map(([path, screen]) => [screen, path]));
+
+function screenFromPath(pathname) {
+  return routes[pathname] || 'login';
+}
+
 export default function App() {
-  const [screen, setScreen] = useState('login');
+  const [screen, setScreen] = useState(() => screenFromPath(window.location.pathname));
   const [email, setEmail] = useState('usuario@tempgo.com');
   const [password, setPassword] = useState('123456');
   const [registerEmail, setRegisterEmail] = useState('');
@@ -44,6 +58,25 @@ export default function App() {
   const [theme, setTheme] = useState('light');
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const handlePopState = () => setScreen(screenFromPath(window.location.pathname));
+    const currentPath = screenPaths[screen];
+
+    if (window.location.pathname !== currentPath) {
+      window.history.replaceState({}, '', currentPath);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [screen]);
+
+  const navigate = (nextScreen) => {
+    const nextPath = screenPaths[nextScreen];
+    if (!nextPath || nextScreen === screen) return;
+    window.history.pushState({}, '', nextPath);
+    setScreen(nextScreen);
+  };
 
   const info = categories[category];
 
@@ -88,7 +121,7 @@ export default function App() {
       }
 
       setMessage({ severity: 'success', text: `“${food}” se registró correctamente.` });
-      setScreen('setup');
+      navigate('setup');
     } catch (error) {
       setMessage({ severity: 'warn', text: error.message || 'No se pudo guardar el alimento en la API.' });
     } finally {
@@ -96,7 +129,7 @@ export default function App() {
     }
   };
 
-  const back = () => setScreen(({ dashboard: 'setup', setup: 'food', food: 'login', register: 'login' })[screen] || 'login');
+  const back = () => navigate(({ dashboard: 'setup', setup: 'food', food: 'login', register: 'login' })[screen] || 'login');
 
   const handleRegister = async (event) => {
     event.preventDefault();
@@ -137,7 +170,7 @@ export default function App() {
       setRegisterPassword('');
       setConfirmPassword('');
       setMessage({ severity: 'success', text: 'Registro exitoso. Ya puedes iniciar sesión.' });
-      setScreen('login');
+      navigate('login');
     } catch (error) {
       setMessage({ severity: 'warn', text: error.message || 'No se pudo registrar el usuario.' });
     } finally {
@@ -169,7 +202,7 @@ export default function App() {
 
       localStorage.setItem('tempgo_token', data.token || '');
       setMessage({ severity: 'success', text: 'Inicio de sesión correcto.' });
-      setScreen('food');
+      navigate('food');
     } catch (error) {
       setMessage({ severity: 'warn', text: error.message || 'Credenciales inválidas.' });
     } finally {
@@ -199,7 +232,7 @@ export default function App() {
             <label>Correo<InputText type="email" value={email} onChange={e => setEmail(e.target.value)} disabled={busy} required /></label>
             <label>Contraseña<Password value={password} onChange={e => setPassword(e.target.value)} feedback={false} toggleMask disabled={busy} required /></label>
             <Button type="submit" label={busy ? 'CARGANDO...' : 'INGRESAR'} className="full" disabled={busy} />
-            <Button type="button" label="REGISTRARSE" className="full secondary" onClick={() => setScreen('register')} disabled={busy} style={{ marginTop: '0.75rem' }} />
+            <Button type="button" label="REGISTRARSE" className="full secondary" onClick={() => navigate('register')} disabled={busy} style={{ marginTop: '0.75rem' }} />
           </form>
         </Card>
       </section>}
@@ -212,7 +245,7 @@ export default function App() {
           <label>Contraseña<Password value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} feedback={false} toggleMask disabled={busy} required /></label>
           <label>Confirmar contraseña<Password value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} feedback={false} toggleMask disabled={busy} required /></label>
           <Button type="submit" label={busy ? 'CARGANDO...' : 'CREAR CUENTA'} className="full" disabled={busy} />
-          <Button type="button" label="VOLVER AL LOGIN" className="full secondary" onClick={() => setScreen('login')} disabled={busy} style={{ marginTop: '0.75rem' }} />
+          <Button type="button" label="VOLVER AL LOGIN" className="full secondary" onClick={() => navigate('login')} disabled={busy} style={{ marginTop: '0.75rem' }} />
         </form>
       </Card>}
 
@@ -260,7 +293,7 @@ export default function App() {
         {message && <Message severity={message.severity} text={message.text} />}
         <h2>TIPO DE PRODUCTO</h2><div className="categories">{Object.entries(categories).map(([key, item]) => <button key={key} className={`category ${category === key ? 'selected' : ''}`} onClick={() => setCategory(key)}><img src={item.image} alt="" /><span>{item.name}</span></button>)}</div>
         <Card><h3>ALIMENTO REGISTRADO</h3><p>{food}</p></Card><div className="status-grid"><Card><h3>ENERGÍA</h3><strong>⚡ ENCENDIDO</strong></Card><Card><h3>TEMPERATURA IDEAL</h3><strong>{info.ideal}</strong></Card></div>
-      </section><aside className="sidebar"><Card><h3>CÓDIGO</h3><strong className="code">9NL47</strong><Button label="COPIAR" onClick={() => navigator.clipboard?.writeText('9NL47')} /><Button icon={theme === 'light' ? 'pi pi-moon' : 'pi pi-sun'} rounded onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label="Cambiar tema" /></Card><Button label="LISTO" className="full" onClick={() => setScreen('dashboard')} /></aside></div>}
+      </section><aside className="sidebar"><Card><h3>CÓDIGO</h3><strong className="code">9NL47</strong><Button label="COPIAR" onClick={() => navigator.clipboard?.writeText('9NL47')} /><Button icon={theme === 'light' ? 'pi pi-moon' : 'pi pi-sun'} rounded onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label="Cambiar tema" /></Card><Button label="LISTO" className="full" onClick={() => navigate('dashboard')} /></aside></div>}
 
       {screen === 'dashboard' && <div className="dashboard"><section className="dash-stats"><Card><h3>ENERGÍA</h3><strong>⚡ ENCENDIDO</strong></Card><Card><h3>ESTADO</h3><strong>📶 ÓPTIMO</strong></Card><Card><h3>TEMPERATURA</h3><strong className="temperature">{temperature}°C</strong></Card></section><section><Card><h3>CONTROL</h3><div className="range-labels"><span>{info.min}</span><span>{info.max}</span></div><div className="bar"><div /></div><p>{info.low} · {info.idealLegend} · {info.high}</p></Card><div className="status-grid"><Card><h3>ALARMA</h3><strong>0 🔔</strong><p>PRODUCTO FUERA DEL RANGO</p></Card><Card><h3>{info.name}</h3><div className="product-summary"><p>{food}</p><img src={info.image} alt={info.name} /></div></Card></div></section></div>}
     </main>
