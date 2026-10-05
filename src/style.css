@@ -481,10 +481,14 @@ img {
   white-space: nowrap;
 }
 
-.field-status {
+.input-shell .field-status {
   margin-left: 0.15rem;
   font-size: 1rem;
   color: #3ac88d;
+}
+
+.input-shell .field-status-invalid {
+  color: #dc3545;
 }
 
 .register-submit {

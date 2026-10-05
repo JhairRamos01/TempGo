@@ -661,10 +661,16 @@ export default function App() {
                       placeholder="••••••••"
                       required
                     />
-                    <i
-                      className="pi pi-check field-status"
-                      aria-hidden="true"
-                    />
+                    {confirmPassword && (
+                      <i
+                        className={`pi field-status ${
+                          registerPassword === confirmPassword
+                            ? "pi-check"
+                            : "pi-times field-status-invalid"
+                        }`}
+                        aria-hidden="true"
+                      />
+                    )}
                   </div>
                 </label>
 
