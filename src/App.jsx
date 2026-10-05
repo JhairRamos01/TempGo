@@ -507,7 +507,19 @@ export default function App() {
           <section className="login-shell">
             <div className="login-card">
               <div className="login-icon" aria-hidden="true">
-                <i className="pi pi-thermometer" />
+                <svg
+                  viewBox="0 0 24 24"
+                  width="34"
+                  height="34"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z" />
+                  <path d="M12 18v-6" />
+                </svg>
               </div>
               <h2>Iniciar Sesión</h2>
               <p>
