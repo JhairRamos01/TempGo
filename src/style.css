@@ -126,6 +126,13 @@ img {
   margin-left: auto;
 }
 
+.login-header .logo {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  color: var(--primary-dark);
+}
+
 .access-pill {
   padding: 0.8rem 1.2rem;
   border-radius: 999px;
