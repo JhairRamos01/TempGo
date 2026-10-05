@@ -79,6 +79,7 @@ const routes = {
   "/": "login",
   "/login": "login",
   "/registro": "register",
+  "/registrarse": "register",
   "/alimentos": "food",
   "/configuracion": "setup",
   "/producto": "product",
@@ -448,7 +449,7 @@ export default function App() {
         </div>
       )}
       <header className="topbar">
-        {screen !== "login" && (
+        {screen !== "login" && screen !== "register" && (
           <Button
             icon="pi pi-arrow-left"
             text
@@ -461,7 +462,7 @@ export default function App() {
           <span className="device-code">COD: 9NL47</span>
         )}
 
-        {screen === "login" ? (
+        {screen === "login" || screen === "register" ? (
           <div className="brand-wrap login-header">
             <span className="brand-kicker access-pill">ACCESO</span>
             <div className="logo">
@@ -476,8 +477,7 @@ export default function App() {
           </div>
         )}
 
-        {(screen === "register" ||
-          screen === "food" ||
+        {(screen === "food" ||
           screen === "setup" ||
           screen === "product") && (
           <div className="topbar-user">
