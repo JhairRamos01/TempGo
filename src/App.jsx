@@ -81,6 +81,7 @@ const routes = {
   "/registro": "register",
   "/alimentos": "food",
   "/configuracion": "setup",
+  "/producto": "product",
   "/dashboard": "dashboard",
 };
 
@@ -107,6 +108,12 @@ const screenMeta = {
     subtitle:
       "Revisa los rangos recomendados y deja el sistema listo para operar.",
   },
+  product: {
+    label: "Producto",
+    title: "Registro del producto",
+    subtitle:
+      "Consulta la configuración recomendada para este tipo de alimento.",
+  },
   dashboard: {
     label: "Panel",
     title: "Estado del contenedor",
@@ -128,6 +135,7 @@ export default function App() {
   );
   const [email, setEmail] = useState("usuario@tempgo.com");
   const [password, setPassword] = useState("123456");
+  const [companyName, setCompanyName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -139,6 +147,7 @@ export default function App() {
   const [theme, setTheme] = useState("light");
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
+  const currentMeta = screenMeta[screen] || screenMeta.login;
 
   useEffect(() => {
     const handlePopState = () =>
@@ -153,6 +162,10 @@ export default function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [screen]);
 
+  useEffect(() => {
+    document.title = `TempGo | ${currentMeta.title}`;
+  }, [currentMeta.title]);
+
   const navigate = (nextScreen) => {
     const nextPath = screenPaths[nextScreen];
     if (!nextPath || nextScreen === screen) return;
@@ -161,7 +174,84 @@ export default function App() {
   };
 
   const info = categories[category];
-  const currentMeta = screenMeta[screen] || screenMeta.login;
+  const productMeta = {
+    refrigerados: {
+      label: "Productos refrigerados",
+      accent: "refrigerados",
+      emoji: "🧊",
+      summary: "Cadena de frío estable y control de frescura",
+    },
+    congelados: {
+      label: "Productos congelados",
+      accent: "congelados",
+      emoji: "❄️",
+      summary: "Congelación controlada con margen térmico seguro",
+    },
+    frutas: {
+      label: "Frutas y verduras",
+      accent: "frutas",
+      emoji: "🍏",
+      summary: "Cuidado de textura, humedad y conservación fresca",
+    },
+  };
+
+  const foodRows = [
+    {
+      id: "#001",
+      name: "Pollo Fresco",
+      subtitle: "Carnes Blancas • Lote CH-990",
+      temp: "2.5°C",
+      status: "Óptimo",
+      statusTone: "good",
+      range: "0°C - 4°C",
+      date: "26/09/2026",
+      chip: "refrigerados",
+    },
+    {
+      id: "#002",
+      name: "Pescado Congelado",
+      subtitle: "Mancos y Salmón • Cámara Ultra-Frío",
+      temp: "-19.5°C",
+      status: "Congelación",
+      statusTone: "cool",
+      range: "-18°C - -22°C",
+      date: "26/09/2026",
+      chip: "congelados",
+    },
+    {
+      id: "#003",
+      name: "Manzanas y Lechuga",
+      subtitle: "Hortalizas y Cítricos • Zona Fresca",
+      temp: "9.0°C",
+      status: "Fresco",
+      statusTone: "fresh",
+      range: "8°C - 12°C",
+      date: "25/09/2026",
+      chip: "frutas",
+    },
+    {
+      id: "#004",
+      name: "Carne Vacuna",
+      subtitle: "Cortes Premium • Cámara Chill 02",
+      temp: "1.8°C",
+      status: "Óptimo",
+      statusTone: "good",
+      range: "0°C - 4°C",
+      date: "26/09/2026",
+      chip: "refrigerados",
+    },
+    {
+      id: "#005",
+      name: "Helado Artesanal",
+      subtitle: "Postres Fríos • Depósito Congelación",
+      temp: "-20.2°C",
+      status: "Congelación",
+      statusTone: "cool",
+      range: "-18°C - -22°C",
+      date: "24/09/2026",
+      chip: "congelados",
+    },
+  ];
 
   const formatDateForApi = (value) => {
     if (!value) return new Date().toLocaleDateString("es-ES");
@@ -234,15 +324,29 @@ export default function App() {
 
   const back = () =>
     navigate(
-      { dashboard: "setup", setup: "food", food: "login", register: "login" }[
-        screen
-      ] || "login",
+      {
+        dashboard: "setup",
+        setup: "food",
+        food: "login",
+        register: "login",
+        product: "setup",
+      }[screen] || "login",
     );
+
+  const handleContinueToProduct = (event) => {
+    event.preventDefault();
+    navigate("product");
+  };
 
   const handleRegister = async (event) => {
     event.preventDefault();
 
-    if (!registerEmail.trim() || !registerPassword || !confirmPassword) {
+    if (
+      !companyName.trim() ||
+      !registerEmail.trim() ||
+      !registerPassword ||
+      !confirmPassword
+    ) {
       setMessage({
         severity: "warn",
         text: "Completa todos los campos para registrarte.",
@@ -261,7 +365,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre: (registerEmail.split("@")[0] || "Usuario").trim(),
+          nombre: companyName.trim(),
           email: registerEmail.trim(),
           password: registerPassword,
           edad: 25,
@@ -277,6 +381,7 @@ export default function App() {
       }
 
       localStorage.setItem("tempgo_token", data.token || "");
+      setCompanyName("");
       setEmail(registerEmail.trim());
       setPassword(registerPassword);
       setRegisterEmail("");
@@ -360,317 +465,733 @@ export default function App() {
             onClick={back}
           />
         )}
-        {screen !== "login" && <span className="device-code">COD: 9NL47</span>}
-        <div className="brand-wrap">
-          <span className="brand-kicker">{currentMeta.label}</span>
-          <div className="logo">
-            Temp<span>Go</span>
+        {screen !== "login" && screen !== "register" && (
+          <span className="device-code">COD: 9NL47</span>
+        )}
+
+        {screen === "login" ? (
+          <div className="brand-wrap login-header">
+            <span className="brand-kicker access-pill">ACCESO</span>
+            <div className="logo">
+              Temp<span>Go</span>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="brand-wrap brand-neutral">
+            <div className="logo">
+              Temp<span>Go</span>
+            </div>
+          </div>
+        )}
+
+        {(screen === "register" ||
+          screen === "food" ||
+          screen === "setup" ||
+          screen === "product") && (
+          <div className="topbar-user">
+            <span>Usuario</span>
+            <button type="button" className="user-badge" aria-label="Usuario">
+              <i className="pi pi-user" />
+            </button>
+          </div>
+        )}
       </header>
       <main className="container">
-        {screen === "login" && (
-          <section className="landing">
-            <div className="hero-copy">
-              <span className="eyebrow">Sistema de monitoreo térmico</span>
-              <h1>
-                Tus productos.
-                <br />
-                Tu temperatura.
-                <br />
-                Tu control.
-              </h1>
-              <p>{currentMeta.subtitle}</p>
-              <div className="hero-badges">
-                <span>✅ Control inteligente</span>
-                <span>📊 Alerta de temperatura</span>
-                <span>🧊 Seguridad óptima</span>
-              </div>
-              <div className="micro-stats">
-                <div>
-                  <strong>98%</strong>
-                  <span>estabilidad</span>
-                </div>
-                <div>
-                  <strong>24/7</strong>
-                  <span>monitoreo</span>
-                </div>
-                <div>
-                  <strong>3 tipos</strong>
-                  <span>de almacenamiento</span>
-                </div>
+        {screen !== "login" &&
+          screen !== "register" &&
+          screen !== "food" &&
+          screen !== "setup" &&
+          screen !== "product" && (
+            <div className="page-intro">
+              <span className="step-tag">{currentMeta.label}</span>
+              <div>
+                <h2>{currentMeta.title}</h2>
+                <p>{currentMeta.subtitle}</p>
               </div>
             </div>
-            <Card className="form-card panel-card">
-              <div className="panel-header">
-                <span className="step-tag">Paso 1</span>
-                <h2>Acceder / Login</h2>
+          )}
+
+        {screen === "login" && (
+          <section className="login-shell">
+            <div className="login-card">
+              <div className="login-icon" aria-hidden="true">
+                <i className="pi pi-thermometer" />
               </div>
+              <h2>Iniciar Sesión</h2>
+              <p>
+                Ingresa a la plataforma de monitoreo y control térmico
+                <strong> TempGo</strong>
+              </p>
+
               {message && (
-                <Message severity={message.severity} text={message.text} />
+                <div className="login-message">
+                  <Message severity={message.severity} text={message.text} />
+                </div>
               )}
-              <form onSubmit={handleLogin}>
+
+              <form onSubmit={handleLogin} className="login-form">
                 <label>
-                  Correo
-                  <InputText
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={busy}
-                    required
-                  />
+                  Correo Electrónico
+                  <div className="input-shell">
+                    <i className="pi pi-envelope" aria-hidden="true" />
+                    <InputText
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={busy}
+                      placeholder="ejemplo@empresa.com"
+                      required
+                    />
+                  </div>
                 </label>
+
                 <label>
                   Contraseña
-                  <Password
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    feedback={false}
-                    toggleMask
-                    disabled={busy}
-                    required
-                  />
+                  <div className="input-shell password-shell">
+                    <i className="pi pi-lock" aria-hidden="true" />
+                    <Password
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      feedback={false}
+                      toggleMask
+                      disabled={busy}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
                 </label>
+
+                <div className="login-options">
+                  <label className="remember-box">
+                    <input type="checkbox" />
+                    <span>Recordar usuario</span>
+                  </label>
+                  <button type="button" className="link-button">
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
+
                 <Button
                   type="submit"
-                  label={busy ? "CARGANDO..." : "INGRESAR"}
-                  className="full"
+                  label={busy ? "CARGANDO..." : "Ingresar →"}
+                  className="full primary-btn"
                   disabled={busy}
                 />
-                <Button
+
+                <div className="divider">ASEGURAMIENTO DE CALIDAD</div>
+
+                <button
                   type="button"
-                  label="REGISTRARSE"
-                  className="full secondary"
+                  className="register-link"
                   onClick={() => navigate("register")}
                   disabled={busy}
-                  style={{ marginTop: "0.75rem" }}
-                />
+                >
+                  ¿Aún no tienes cuenta? <span>Regístrate →</span>
+                </button>
               </form>
-            </Card>
+            </div>
           </section>
         )}
 
         {screen === "register" && (
-          <Card className="form-card narrow panel-card">
-            <div className="panel-header">
-              <span className="step-tag">Paso 2</span>
-              <h2>Registro</h2>
+          <section className="register-shell">
+            <div className="register-card">
+              <div className="login-icon register-icon" aria-hidden="true">
+                <i className="pi pi-user-plus" />
+              </div>
+              <h2>Registrarse</h2>
+              <p>
+                Únete a la plataforma industrial TempGo para la gestión
+                unificada de cadena de frío y trazabilidad alimentaria continua.
+              </p>
+
+              {message && (
+                <div className="login-message">
+                  <Message severity={message.severity} text={message.text} />
+                </div>
+              )}
+
+              <form onSubmit={handleRegister} className="register-form">
+                <label>
+                  Nombre de Instalación o Empresa
+                  <div className="input-shell">
+                    <i className="pi pi-building" aria-hidden="true" />
+                    <InputText
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      disabled={busy}
+                      placeholder="p. ej. Frigorífico Central Andino"
+                      required
+                    />
+                  </div>
+                </label>
+
+                <div className="register-row">
+                  <label>
+                    Correo:
+                    <div className="input-shell">
+                      <i className="pi pi-envelope" aria-hidden="true" />
+                      <InputText
+                        type="email"
+                        value={registerEmail}
+                        onChange={(e) => setRegisterEmail(e.target.value)}
+                        disabled={busy}
+                        placeholder="ejemplo@empresa.com"
+                        required
+                      />
+                    </div>
+                  </label>
+                  <span className="inline-hint">Acceso HACCP</span>
+                </div>
+
+                <label>
+                  Contraseña:
+                  <div className="input-shell password-shell">
+                    <i className="pi pi-lock" aria-hidden="true" />
+                    <Password
+                      value={registerPassword}
+                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      feedback={false}
+                      toggleMask
+                      disabled={busy}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <span className="field-tally">Mín. 8 caracteres</span>
+                  </div>
+                </label>
+
+                <label>
+                  Confirmar Contraseña
+                  <div className="input-shell password-shell">
+                    <i className="pi pi-lock" aria-hidden="true" />
+                    <Password
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      feedback={false}
+                      toggleMask
+                      disabled={busy}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <i
+                      className="pi pi-check field-status"
+                      aria-hidden="true"
+                    />
+                  </div>
+                </label>
+
+                <Button
+                  type="submit"
+                  label={busy ? "CARGANDO..." : "Crear Cuenta →"}
+                  className="full primary-btn register-submit"
+                  disabled={busy}
+                />
+
+                <div className="register-divider">
+                  O REGISTRAR CON CREDENCIAL IOT
+                </div>
+
+                <div className="register-login">
+                  <span>¿Ya tienes una cuenta activa?</span>
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => navigate("login")}
+                    disabled={busy}
+                  >
+                    Iniciar Sesión
+                  </button>
+                </div>
+              </form>
             </div>
-            {message && (
-              <Message severity={message.severity} text={message.text} />
-            )}
-            <form onSubmit={handleRegister}>
-              <label>
-                Correo
-                <InputText
-                  type="email"
-                  value={registerEmail}
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                  disabled={busy}
-                  required
-                />
-              </label>
-              <label>
-                Contraseña
-                <Password
-                  value={registerPassword}
-                  onChange={(e) => setRegisterPassword(e.target.value)}
-                  feedback={false}
-                  toggleMask
-                  disabled={busy}
-                  required
-                />
-              </label>
-              <label>
-                Confirmar contraseña
-                <Password
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  feedback={false}
-                  toggleMask
-                  disabled={busy}
-                  required
-                />
-              </label>
-              <Button
-                type="submit"
-                label={busy ? "CARGANDO..." : "CREAR CUENTA"}
-                className="full"
-                disabled={busy}
-              />
-              <Button
-                type="button"
-                label="VOLVER AL LOGIN"
-                className="full secondary"
-                onClick={() => navigate("login")}
-                disabled={busy}
-                style={{ marginTop: "0.75rem" }}
-              />
-            </form>
-          </Card>
+
+            <div className="register-footer">
+              <span className="trust-badge">
+                <i className="pi pi-shield" />
+                <small>Certified TLS 1.3 / AES-256</small>
+              </span>
+              <span className="trust-badge">
+                <i className="pi pi-check-circle" />
+                <small>HACCP Food-Safety Validated</small>
+              </span>
+              <span className="trust-badge">
+                <i className="pi pi-chart-line" />
+                <small>Redundancia Multi-Sensor 99.9%</small>
+              </span>
+            </div>
+          </section>
         )}
 
         {screen === "food" && (
-          <div className="food-layout">
-            <Card className="form-card temperature-panel panel-card">
-              <div className="panel-header compact">
-                <span className="step-tag">Recomendaciones</span>
-                <h2>Temperaturas recomendadas</h2>
+          <section className="food-screen">
+            <div className="food-header-row">
+              <div className="food-title-wrap">
+                <span className="food-header-icon" aria-hidden="true">
+                  <i className="pi pi-clipboard" />
+                </span>
+                <h1>Lista de alimentos</h1>
+                <span className="food-counter">5</span>
               </div>
-              <div className="temperature-list">
-                <div className="temperature-item frozen">
-                  <div className="info-icon" aria-label="Alimentos congelados">
-                    ❄️
-                  </div>
-                  <div className="info-copy">
-                    <strong>Alimentos Congelados:</strong>
-                    <span>-18°C o -22°C</span>
-                  </div>
-                </div>
-                <div className="temperature-item fresh">
-                  <div className="info-icon" aria-label="Alimentos frescos">
-                    🧊
-                  </div>
-                  <div className="info-copy">
-                    <strong>Alimentos Frescos:</strong>
-                    <span>0°C - 4°C</span>
-                  </div>
-                </div>
-                <div className="temperature-item produce">
-                  <div className="info-icon" aria-label="Frutas y verduras">
-                    🍏
-                  </div>
-                  <div className="info-copy">
-                    <strong>Frutas y verduras:</strong>
-                    <span>8°C - 12°C</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
 
-            <Card
-              className="form-card narrow panel-card"
-              style={{ minHeight: "100%" }}
-            >
-              <div className="panel-header compact">
-                <span className="step-tag">Paso 3</span>
-                <h2>Ingreso del alimento</h2>
+              <Button
+                type="button"
+                className="food-entry-btn"
+                label="Ingresar Alimento"
+                icon="pi pi-plus"
+                onClick={() => navigate("setup")}
+              />
+            </div>
+
+            <p className="food-subtitle">
+              Monitoreo biológico de cadena de frío y trazabilidad térmica según
+              estándar ISO 22000.
+            </p>
+
+            <div className="food-toolbar">
+              <div className="food-tabs">
+                <button type="button" className="filter-tab active">
+                  Todos los Alimentos
+                </button>
+                <button type="button" className="filter-tab">
+                  Refrigerados
+                </button>
+                <button type="button" className="filter-tab">
+                  Congelados
+                </button>
+                <button type="button" className="filter-tab">
+                  Frutas y Verduras
+                </button>
+                <button
+                  type="button"
+                  className="filter-tab add-tab"
+                  aria-label="Agregar filtro"
+                >
+                  +
+                </button>
               </div>
-              {message && (
-                <Message severity={message.severity} text={message.text} />
-              )}
-              <form onSubmit={submitFood}>
-                <label>
-                  Alimento
-                  <InputText
-                    value={food}
-                    onChange={(e) => setFood(e.target.value)}
-                    disabled={busy}
-                    required
-                  />
-                </label>
-                <label>
-                  Temperatura (°C)
-                  <InputNumber
-                    value={temperature}
-                    onValueChange={(e) => setTemperature(e.value)}
-                    disabled={busy}
-                    required
-                  />
-                </label>
-                <label>
-                  Rango de temperatura: {range > 0 ? "+" : ""}
-                  {range}°C
-                  <Slider
-                    value={range}
-                    onChange={(e) => setRange(e.value)}
-                    disabled={busy}
-                    min={-40}
-                    max={40}
-                  />
-                </label>
-                <label>
-                  Fecha
-                  <Calendar
-                    value={date}
-                    onChange={(e) => setDate(e.value)}
-                    disabled={busy}
-                    dateFormat="dd/mm/yy"
-                    showIcon
-                    required
-                  />
-                </label>
-                <Button
-                  type="submit"
-                  label={busy ? "ENVIANDO…" : "INGRESAR"}
-                  icon={busy ? "pi pi-spin pi-spinner" : "pi pi-check"}
-                  disabled={busy}
-                  className="full"
-                />
-              </form>
-            </Card>
-          </div>
+
+              <div className="food-search">
+                <i className="pi pi-search" aria-hidden="true" />
+                <InputText placeholder="Buscar alimento o ID..." />
+              </div>
+            </div>
+
+            <div className="food-table-panel">
+              <div className="food-table-header">
+                <span>ID</span>
+                <span>ALIMENTO</span>
+                <span>TEMPERATURA</span>
+                <span>RANGO TÉRMICO</span>
+                <span>FECHA REGISTRO</span>
+                <span>ACCIÓN</span>
+              </div>
+
+              {foodRows.map((row) => (
+                <div key={row.id} className="food-table-row">
+                  <span className="food-id">{row.id}</span>
+                  <div className="food-name-cell">
+                    <div className="food-avatar">
+                      {row.chip === "refrigerados" && "🧊"}
+                      {row.chip === "congelados" && "❄️"}
+                      {row.chip === "frutas" && "🍏"}
+                    </div>
+                    <div>
+                      <strong>{row.name}</strong>
+                      <small>{row.subtitle}</small>
+                    </div>
+                  </div>
+                  <div className="temp-cell">
+                    <span className={`temp-value ${row.statusTone}`}>
+                      {row.temp}
+                    </span>
+                    <span className="temp-status">{row.status}</span>
+                  </div>
+                  <div className="range-cell">
+                    <span>{row.range}</span>
+                    <div className="range-bar">
+                      <span className={row.statusTone} />
+                    </div>
+                  </div>
+                  <div className="date-cell">{row.date}</div>
+                  <button
+                    type="button"
+                    className="table-arrow"
+                    aria-label={`Ver ${row.name}`}
+                  >
+                    <i className="pi pi-angle-right" />
+                  </button>
+                </div>
+              ))}
+
+              <div className="food-footer-bar">
+                <div className="food-meta">
+                  <i className="pi pi-info-circle" aria-hidden="true" />
+                  <span>
+                    Mostrando 1 - 5 de 18 registros verificados por Sonda
+                    Digital
+                  </span>
+                </div>
+
+                <div className="pagination">
+                  <button
+                    type="button"
+                    className="page-arrow"
+                    aria-label="Página anterior"
+                  >
+                    <i className="pi pi-angle-left" />
+                  </button>
+                  <button type="button" className="page-number active">
+                    1
+                  </button>
+                  <button type="button" className="page-number">
+                    2
+                  </button>
+                  <button type="button" className="page-number">
+                    3
+                  </button>
+                  <button
+                    type="button"
+                    className="page-arrow"
+                    aria-label="Página siguiente"
+                  >
+                    <i className="pi pi-angle-right" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
         )}
 
         {screen === "setup" && (
-          <div className="setup-grid">
-            <section className="panel-stack">
-              {message && (
-                <Message severity={message.severity} text={message.text} />
-              )}
-              <div className="section-headline">
-                <span className="step-tag">Paso 4</span>
-                <h2>Tipo de producto</h2>
+          <section className="config-screen">
+            <div className="config-header-row">
+              <div className="config-title-wrap">
+                <span className="config-header-icon" aria-hidden="true">
+                  <i className="pi pi-file-edit" />
+                </span>
+                <div>
+                  <h1>Registro Rápido de Alimentos</h1>
+                  <p>
+                    Mantenimiento de cadena de frío y trazabilidad térmica según
+                    normativa HACCP
+                  </p>
+                </div>
               </div>
-              <div className="categories">
-                {Object.entries(categories).map(([key, item]) => (
-                  <button
-                    key={key}
-                    className={`category ${category === key ? "selected" : ""}`}
-                    onClick={() => setCategory(key)}
-                  >
-                    <img src={item.image} alt="" />
-                    <span>{item.name}</span>
-                  </button>
-                ))}
+
+              <div className="module-pill">
+                <i className="pi pi-check" />
+                <span>Módulo</span>
+                <strong>Verificado</strong>
               </div>
-              <Card className="info-surface">
-                <h3>Alimento registrado</h3>
-                <p>{food}</p>
-              </Card>
-              <div className="status-grid">
-                <Card>
-                  <h3>Energía</h3>
-                  <strong>⚡ Encendido</strong>
-                </Card>
-                <Card>
-                  <h3>Temperatura ideal</h3>
-                  <strong>{info.ideal}</strong>
-                </Card>
+            </div>
+
+            <div className="config-layout">
+              <aside className="range-panel">
+                <div className="panel-title-with-icon">
+                  <i className="pi pi-thermometer" aria-hidden="true" />
+                  <span>Rangos de Temperatura :</span>
+                </div>
+
+                <div className="range-list">
+                  {Object.entries(categories).map(([key, item]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`range-option ${category === key ? "selected" : ""}`}
+                      onClick={() => setCategory(key)}
+                    >
+                      <span className={`range-dot ${key}`} aria-hidden="true" />
+                      <div className="range-copy">
+                        <strong>{item.ideal}</strong>
+                        <small>{item.name}</small>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="range-panel-footer">
+                  <span>
+                    <i className="pi pi-info-circle" /> Via Sonda Digital
+                  </span>
+                  <span>
+                    <i className="pi pi-shield" /> HACCP Cert
+                  </span>
+                </div>
+              </aside>
+
+              <div className="config-form-panel">
+                <div className="config-form-header">
+                  <div className="panel-title-with-icon">
+                    <i className="pi pi-plus-circle" aria-hidden="true" />
+                    <span>Ingresar alimento :</span>
+                  </div>
+                  <span className="new-record">Nuevo Registro</span>
+                </div>
+
+                {message && (
+                  <div className="login-message config-message">
+                    <Message severity={message.severity} text={message.text} />
+                  </div>
+                )}
+
+                <form
+                  onSubmit={handleContinueToProduct}
+                  className="config-form"
+                >
+                  <label className="field-block">
+                    <span className="field-label">Alimento Específico :</span>
+                    <div className="chip-suggestions">
+                      <button type="button" className="suggestion-chip">
+                        Salmón
+                      </button>
+                      <button type="button" className="suggestion-chip">
+                        Manzana
+                      </button>
+                      <button type="button" className="suggestion-chip">
+                        Pollo Congelado
+                      </button>
+                    </div>
+                    <div className="field-input-wrap with-icon">
+                      <InputText
+                        value={food}
+                        onChange={(e) => setFood(e.target.value)}
+                        disabled={busy}
+                        placeholder="Ej. Salmón fresco, manzana, pollo..."
+                        required
+                      />
+                      <i className="pi pi-search" aria-hidden="true" />
+                    </div>
+                  </label>
+
+                  <label className="field-block">
+                    <div className="field-row">
+                      <span className="field-label">Temperatura (°C) :</span>
+                      <div className="temp-badge-group">
+                        <span className="temp-badge negative">-0.5</span>
+                        <span className="temp-badge positive">+0.5</span>
+                        <span className="temp-badge status">
+                          Frescos Óptimo
+                        </span>
+                      </div>
+                    </div>
+                    <div className="field-input-wrap compact-value">
+                      <InputNumber
+                        value={temperature}
+                        onValueChange={(e) => setTemperature(e.value)}
+                        disabled={busy}
+                        required
+                        min={-30}
+                        max={30}
+                        step={0.1}
+                      />
+                      <span className="unit">°C</span>
+                    </div>
+                  </label>
+
+                  <label className="field-block">
+                    <div className="field-row">
+                      <span className="field-label">
+                        Rango de Temperatura :
+                      </span>
+                      <div className="range-values">
+                        <span>-30°C</span>
+                        <span>0°C</span>
+                        <span>+30°C</span>
+                      </div>
+                    </div>
+                    <div className="temperature-slider-wrap">
+                      <Slider
+                        value={range}
+                        onChange={(e) => setRange(e.value)}
+                        disabled={busy}
+                        min={-30}
+                        max={30}
+                        step={1}
+                      />
+                    </div>
+                    <div className="slider-labels">
+                      <span>Congelación (-22° a -18°)</span>
+                      <span>Frescos (0° a 4°)</span>
+                      <span>Vegetales (8° a 12°)</span>
+                    </div>
+                  </label>
+
+                  <label className="field-block">
+                    <div className="field-row">
+                      <span className="field-label">Fecha :</span>
+                      <span className="today-tag">Hoy</span>
+                    </div>
+                    <div className="field-input-wrap with-icon">
+                      <Calendar
+                        value={date}
+                        onChange={(e) => setDate(e.value)}
+                        disabled={busy}
+                        dateFormat="dd/mm/yy"
+                        showIcon
+                        required
+                      />
+                    </div>
+                  </label>
+
+                  <Button
+                    type="submit"
+                    label={busy ? "CARGANDO..." : "Ingresar"}
+                    icon={busy ? "pi pi-spin pi-spinner" : "pi pi-arrow-right"}
+                    className="config-submit"
+                    disabled={busy}
+                  />
+                </form>
               </div>
-            </section>
-            <aside className="sidebar">
-              <Card>
-                <h3>Código</h3>
-                <strong className="code">9NL47</strong>
-                <Button
-                  label="Copiar"
-                  onClick={() => navigator.clipboard?.writeText("9NL47")}
-                />
-                <Button
-                  icon={theme === "light" ? "pi pi-moon" : "pi pi-sun"}
-                  rounded
-                  onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-                  aria-label="Cambiar tema"
-                />
-              </Card>
-              <Button
-                label="Listo"
-                className="full"
-                onClick={() => navigate("dashboard")}
-              />
-            </aside>
-          </div>
+            </div>
+          </section>
+        )}
+
+        {screen === "product" && (
+          <section className={`product-screen product-${category}`}>
+            <div className="product-shell">
+              <div className="product-topbar-row">
+                <div className="product-module-tag">
+                  {productMeta[category].label}
+                </div>
+                <button
+                  type="button"
+                  className="product-cta"
+                  onClick={() => navigate("setup")}
+                >
+                  + INGRESAR OTRO ALIMENTO
+                </button>
+              </div>
+
+              <div className="product-layout">
+                <aside className="product-side-panel">
+                  <div className="mini-panels">
+                    <div className="mini-panel">
+                      <div className="mini-label">ENERGÍA</div>
+                      <div className="mini-state-row">
+                        <span className="state-pill on">ENCENDIDO</span>
+                        <span className="state-pill off">APAGADO</span>
+                      </div>
+                    </div>
+
+                    <div className="mini-panel">
+                      <div className="mini-label">ESTADO CONEXIÓN</div>
+                      <div className="signal-line">
+                        <span className="signal-text">Señal 98%</span>
+                      </div>
+                      <div className="mini-state-row compact">
+                        <span className="state-pill success">ÓPTIMO</span>
+                        <span className="state-pill muted">ALERTA</span>
+                      </div>
+                    </div>
+
+                    <div className="mini-panel temp-panel">
+                      <div className="mini-label">TEMPERATURA ACTUAL</div>
+                      <div className="temp-readout">{temperature}°C</div>
+                      <small className="temp-note">
+                        Estado{" "}
+                        {category === "congelados"
+                          ? "de congelación"
+                          : "estable"}
+                      </small>
+                    </div>
+
+                    <div className="mini-panel registered-panel">
+                      <div className="mini-label">ALIMENTO REGISTRADO</div>
+                      <div className="registered-item">
+                        <div className="registered-icon">
+                          {productMeta[category].emoji}
+                        </div>
+                        <div>
+                          <strong>{food || "Producto"}</strong>
+                          <small>{productMeta[category].label}</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+
+                <div className="product-main-panel">
+                  <div className="product-heading-row">
+                    <div className="product-headline-wrap">
+                      <span
+                        className="product-headline-icon"
+                        aria-hidden="true"
+                      >
+                        {productMeta[category].emoji}
+                      </span>
+                      <div>
+                        <span className="product-kicker">
+                          {productMeta[category].label}
+                        </span>
+                        <h1>{food || "Producto"}</h1>
+                      </div>
+                    </div>
+                    <div className="product-status-bubble">Rango Óptimo</div>
+                  </div>
+
+                  <div className="product-detail-body">
+                    <div className="product-detail-copy">
+                      <p>{productMeta[category].summary}</p>
+                    </div>
+
+                    <div className="thermal-block">
+                      <div className="thermal-header">
+                        <span>CONTROL DE RANGO TÉRMICO</span>
+                        <span className="thermal-zone">Zona actual</span>
+                      </div>
+
+                      <div className="thermal-bar">
+                        <span
+                          className="thermal-point"
+                          style={{ left: "55%" }}
+                        />
+                      </div>
+
+                      <div className="thermal-scale">
+                        <span>{info.min}</span>
+                        <span>{info.low}</span>
+                        <span>{info.idealLegend}</span>
+                        <span>{info.high}</span>
+                        <span>{info.max}</span>
+                      </div>
+                    </div>
+
+                    <div className="alarm-bar">
+                      <div className="alarm-copy">
+                        <span className="alarm-icon">✓</span>
+                        <div>
+                          <strong>SISTEMA DE ALARMA</strong>
+                          <p>
+                            Sin incidentes térmicos registrados en las últimas
+                            24 horas.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="alarm-actions">
+                        <button type="button">Silenciar Alviso</button>
+                        <button type="button">Historial de Eventos</button>
+                      </div>
+                    </div>
+
+                    <div className="product-actions-row">
+                      <button type="button" className="primary-save-btn">
+                        Guardar Registro
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-save-btn"
+                        onClick={() => navigate("setup")}
+                      >
+                        Editar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         )}
 
         {screen === "dashboard" && (
