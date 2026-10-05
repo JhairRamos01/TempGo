@@ -238,6 +238,9 @@ export default function App() {
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [userName, setUserName] = useState(
+    () => localStorage.getItem("tempgo_user_name") || "",
+  );
   const [userEmail, setUserEmail] = useState(
     () => localStorage.getItem("tempgo_user_email") || "",
   );
@@ -343,9 +346,11 @@ export default function App() {
     setUserMenuOpen(false);
   };
 
-  const saveUserProfile = (address) => {
+  const saveUserProfile = (address, name = "") => {
     const normalizedEmail = address.trim();
+    const normalizedName = name.trim();
     const storedEmail = localStorage.getItem("tempgo_user_email");
+    const storedName = localStorage.getItem("tempgo_user_name") || "";
     let code = localStorage.getItem("tempgo_user_code");
 
     if (
@@ -355,8 +360,17 @@ export default function App() {
       code = generateUserCode();
     }
 
+    const profileName =
+      normalizedName ||
+      (storedEmail?.toLowerCase() === normalizedEmail.toLowerCase()
+        ? storedName
+        : "") ||
+      normalizedEmail.split("@")[0];
+
+    localStorage.setItem("tempgo_user_name", profileName);
     localStorage.setItem("tempgo_user_email", normalizedEmail);
     localStorage.setItem("tempgo_user_code", code);
+    setUserName(profileName);
     setUserEmail(normalizedEmail);
     setUserCode(code);
   };
@@ -466,8 +480,10 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("tempgo_token");
+    localStorage.removeItem("tempgo_user_name");
     localStorage.removeItem("tempgo_user_email");
     localStorage.removeItem("tempgo_user_code");
+    setUserName("");
     setUserEmail("");
     setUserCode("");
     setEmail("");
@@ -524,8 +540,7 @@ export default function App() {
       }
 
       localStorage.setItem("tempgo_token", data.token || "");
-      setUserEmail(registerEmail.trim());
-      saveUserProfile(registerEmail);
+      saveUserProfile(registerEmail, registerName);
       setEmail(registerEmail.trim());
       setPassword(registerPassword);
       setRegisterName("");
@@ -570,7 +585,10 @@ export default function App() {
       }
 
       localStorage.setItem("tempgo_token", data.token || "");
-      saveUserProfile(email);
+      saveUserProfile(
+        email,
+        data.nombre || data.usuario?.nombre || data.user?.nombre || "",
+      );
       setMessage(null);
       setShowSuccessOverlay(true);
       navigate("food");
@@ -701,6 +719,8 @@ export default function App() {
                 role="region"
                 aria-label="Datos de usuario"
               >
+                <span className="user-profile-label">Nombre</span>
+                <strong>{userName || "—"}</strong>
                 <span className="user-profile-label">Correo electrónico</span>
                 <strong>{userEmail || email}</strong>
                 <span className="user-profile-label">Código</span>
@@ -848,7 +868,8 @@ export default function App() {
               )}
 
               <form onSubmit={handleRegister} className="register-form">
-                <label aria-label="Nombre">
+                <label>
+                  Nombre:
                   <div className="input-shell">
                     <i className="pi pi-user" aria-hidden="true" />
                     <InputText
