@@ -259,12 +259,17 @@ img {
 }
 
 .topbar .theme-toggle {
-  display: inline-grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 44px;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
   padding: 0 !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
   border: 1px solid rgba(100, 138, 179, 0.2) !important;
   border-radius: 50% !important;
   background: linear-gradient(145deg, #fff, #eaf3ff) !important;
@@ -285,9 +290,20 @@ img {
 }
 
 .topbar .theme-toggle .p-button-icon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.1em;
+  height: 1.1em;
+  margin: 0 !important;
   font-size: 1.1rem;
   line-height: 1;
   transform: none !important;
+}
+
+.topbar .theme-toggle .p-button-label {
+  display: none !important;
 }
 
 .user-profile {

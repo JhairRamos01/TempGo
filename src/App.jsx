@@ -1380,18 +1380,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="product-actions-row">
-                      <button type="button" className="primary-save-btn">
-                        Guardar Registro
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary-save-btn"
-                        onClick={() => navigate("setup")}
-                      >
-                        Editar
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>
