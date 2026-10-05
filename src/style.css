@@ -250,11 +250,11 @@ img {
   outline-offset: 3px;
 }
 
-.food-user-controls {
+.workspace-user-controls {
   gap: 0.6rem;
 }
 
-.food-user-controls > span {
+.workspace-user-controls > span {
   margin-left: 0.15rem;
 }
 
@@ -279,13 +279,15 @@ img {
 }
 
 .topbar .theme-toggle:hover {
-  transform: translateY(-2px) rotate(-8deg);
+  transform: translateY(-2px);
   background: linear-gradient(145deg, #fff, #dcecff) !important;
   box-shadow: 0 12px 24px rgba(25, 75, 125, 0.2) !important;
 }
 
 .topbar .theme-toggle .p-button-icon {
   font-size: 1.1rem;
+  line-height: 1;
+  transform: none !important;
 }
 
 .user-profile {
@@ -375,7 +377,7 @@ img {
   color: #ff9ba6;
 }
 
-.food-brand .logo {
+.workspace-brand .logo {
   flex-shrink: 0;
   white-space: nowrap;
   font-size: clamp(2rem, 3vw, 2.5rem);
@@ -1036,26 +1038,6 @@ label {
   color: #132b3f;
 }
 
-.food-counter {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #20a0ff, #0f79e2);
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-
-.food-subtitle {
-  margin: 0.5rem 0 1.2rem;
-  max-width: 700px;
-  color: #5f7088;
-  font-size: 0.98rem;
-}
-
 .food-entry-btn {
   min-height: 46px !important;
   border-radius: 16px !important;
@@ -1075,6 +1057,21 @@ label {
   border-radius: 18px;
   padding: 0.8rem 0.9rem;
   box-shadow: 0 12px 26px rgba(16, 35, 60, 0.04);
+}
+
+.food-api-message {
+  margin: 1rem 0;
+}
+
+.food-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 150px;
+  padding: 1.5rem;
+  color: var(--muted);
+  text-align: center;
 }
 
 .food-tabs {
@@ -1295,59 +1292,8 @@ label {
   cursor: pointer;
 }
 
-.food-footer-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.9rem 1.2rem 1rem;
-  border-top: 1px solid rgba(148, 170, 203, 0.18);
-}
-
-.food-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #4f6690;
-  font-size: 0.9rem;
-}
-
-.food-meta i {
-  color: #2985dc;
-}
-
-.pagination {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.page-arrow,
-.page-number {
-  border: 1px solid rgba(136, 158, 187, 0.26);
-  background: rgba(255, 255, 255, 0.6);
-  color: #4a5974;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.page-number.active {
-  background: linear-gradient(135deg, #1aa9ff, #0d87de);
-  border-color: transparent;
-  color: #fff;
-}
-
 .app.dark .food-title-wrap h1 {
   color: #edf6ff;
-}
-
-.app.dark .food-subtitle {
-  color: #adc3d8;
 }
 
 .app.dark .food-toolbar,
@@ -1355,6 +1301,10 @@ label {
   border-color: rgba(152, 190, 221, 0.16);
   background: rgba(11, 38, 58, 0.86);
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.14);
+}
+
+.app.dark .food-empty-state {
+  color: #adc3d8;
 }
 
 .app.dark .filter-tab {
@@ -1396,21 +1346,14 @@ label {
 }
 
 .app.dark .food-name-cell small,
-.app.dark .temp-status,
-.app.dark .food-meta {
+.app.dark .temp-status {
   color: #a9bfd3;
 }
 
-.app.dark .table-arrow,
-.app.dark .page-arrow,
-.app.dark .page-number {
+.app.dark .table-arrow {
   border-color: rgba(152, 190, 221, 0.2);
   background: rgba(22, 57, 81, 0.85);
   color: #d6e7f6;
-}
-
-.app.dark .food-footer-bar {
-  border-color: rgba(152, 190, 221, 0.14);
 }
 
 .temperature-panel {

@@ -137,6 +137,88 @@ function generateUserCode() {
   return Array.from(randomValues, (value) => alphabet[value % alphabet.length]).join("");
 }
 
+function normalizeFoodRecords(payload, categoryKey) {
+  const recordCollections = [
+    "data",
+    "alimentos",
+    "results",
+    "registros",
+    "items",
+    categories[categoryKey].endpoint,
+  ];
+  const records = Array.isArray(payload)
+    ? payload
+    : recordCollections
+        .map((key) => payload?.[key])
+        .find(Array.isArray) ||
+      (payload && typeof payload === "object" ? [payload] : null);
+
+  if (!records) {
+    throw new Error("La API devolvió un formato de alimentos no reconocido.");
+  }
+
+  const category = categories[categoryKey];
+  const toneByCategory = {
+    refrigerados: "good",
+    congelados: "cool",
+    frutas: "fresh",
+  };
+  const statusByCategory = {
+    refrigerados: "Refrigerado",
+    congelados: "Congelado",
+    frutas: "Fresco",
+  };
+
+  return records.map((record, index) => {
+    if (!record || typeof record !== "object" || Array.isArray(record)) {
+      throw new Error("La API devolvió un registro de alimento inválido.");
+    }
+
+    const name =
+      record.alimento_especifico ??
+      record.alimento ??
+      record.nombre ??
+      record.name;
+    if (typeof name !== "string" || !name.trim()) {
+      throw new Error("La API devolvió un alimento sin nombre.");
+    }
+
+    const id = record.id ?? record._id ?? record.id_alimento ?? "";
+    const idValue = id === "" ? "" : String(id);
+    const temperature =
+      record.temperatura ?? record.temperatura_actual ?? record.temp;
+    const range =
+      record.rango ?? record.rango_temperatura ?? record.rango_ideal;
+    const date =
+      record.fecha_creacion ??
+      record.fecha_registro ??
+      record.created_at ??
+      record.fecha ??
+      record.date;
+
+    return {
+      id: idValue ? `#${idValue.replace(/^#/, "")}` : "—",
+      key: `${categoryKey}-${idValue || index}`,
+      name: name.trim(),
+      subtitle:
+        record.lote ??
+        record.descripcion ??
+        category.name.toLocaleLowerCase("es"),
+      temp:
+        temperature === undefined || temperature === null || temperature === ""
+          ? "—"
+          : /°|c$/i.test(String(temperature))
+            ? String(temperature)
+            : `${temperature}°C`,
+      status: statusByCategory[categoryKey],
+      statusTone: toneByCategory[categoryKey],
+      range: range === undefined || range === null ? "—" : String(range),
+      date: date === undefined || date === null ? "—" : String(date),
+      chip: categoryKey,
+    };
+  });
+}
+
 export default function App() {
   const [screen, setScreen] = useState(() =>
     screenFromPath(window.location.pathname),
@@ -162,6 +244,11 @@ export default function App() {
     () => localStorage.getItem("tempgo_user_code") || "",
   );
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [foodRows, setFoodRows] = useState([]);
+  const [foodLoading, setFoodLoading] = useState(false);
+  const [foodLoadError, setFoodLoadError] = useState("");
+  const [foodFilter, setFoodFilter] = useState("todos");
+  const [foodSearch, setFoodSearch] = useState("");
   const currentMeta = screenMeta[screen] || screenMeta.login;
 
   useEffect(() => {
@@ -180,6 +267,62 @@ export default function App() {
   useEffect(() => {
     document.title = `TempGo | ${currentMeta.title}`;
   }, [currentMeta.title]);
+
+  useEffect(() => {
+    if (screen !== "food") return undefined;
+
+    const controller = new AbortController();
+    setFoodLoading(true);
+    setFoodLoadError("");
+
+    const requests = Object.entries(categories).map(
+      async ([categoryKey, category]) => {
+        const response = await fetch(
+          `${API_BASE}/${category.endpoint}`,
+          { signal: controller.signal },
+        );
+        const data = await response.json().catch(() => {
+          throw new Error(
+            `La API de ${category.name.toLocaleLowerCase("es")} devolvió una respuesta inválida (HTTP ${response.status}).`,
+          );
+        });
+
+        if (!response.ok) {
+          const detail =
+            data && (data.message || data.error || data.detail);
+          throw new Error(
+            `No se pudo cargar ${category.name.toLocaleLowerCase("es")} (HTTP ${response.status})${detail ? `: ${detail}` : "."}`,
+          );
+        }
+
+        return normalizeFoodRecords(data, categoryKey);
+      },
+    );
+
+    Promise.allSettled(requests).then((results) => {
+      if (controller.signal.aborted) return;
+
+      const rows = [];
+      const errors = [];
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          rows.push(...result.value);
+        } else if (result.reason?.name !== "AbortError") {
+          errors.push(
+            result.reason instanceof Error
+              ? result.reason.message
+              : "Error desconocido al cargar alimentos.",
+          );
+        }
+      });
+
+      setFoodRows(rows);
+      setFoodLoadError(errors.join(" "));
+      setFoodLoading(false);
+    });
+
+    return () => controller.abort();
+  }, [screen]);
 
   useEffect(() => {
     if (!showSuccessOverlay) return undefined;
@@ -239,63 +382,17 @@ export default function App() {
     },
   };
 
-  const foodRows = [
-    {
-      id: "#001",
-      name: "Pollo Fresco",
-      subtitle: "Carnes Blancas • Lote CH-990",
-      temp: "2.5°C",
-      status: "Óptimo",
-      statusTone: "good",
-      range: "0°C - 4°C",
-      date: "26/09/2026",
-      chip: "refrigerados",
-    },
-    {
-      id: "#002",
-      name: "Pescado Congelado",
-      subtitle: "Mancos y Salmón • Cámara Ultra-Frío",
-      temp: "-19.5°C",
-      status: "Congelación",
-      statusTone: "cool",
-      range: "-18°C - -22°C",
-      date: "26/09/2026",
-      chip: "congelados",
-    },
-    {
-      id: "#003",
-      name: "Manzanas y Lechuga",
-      subtitle: "Hortalizas y Cítricos • Zona Fresca",
-      temp: "9.0°C",
-      status: "Fresco",
-      statusTone: "fresh",
-      range: "8°C - 12°C",
-      date: "25/09/2026",
-      chip: "frutas",
-    },
-    {
-      id: "#004",
-      name: "Carne Vacuna",
-      subtitle: "Cortes Premium • Cámara Chill 02",
-      temp: "1.8°C",
-      status: "Óptimo",
-      statusTone: "good",
-      range: "0°C - 4°C",
-      date: "26/09/2026",
-      chip: "refrigerados",
-    },
-    {
-      id: "#005",
-      name: "Helado Artesanal",
-      subtitle: "Postres Fríos • Depósito Congelación",
-      temp: "-20.2°C",
-      status: "Congelación",
-      statusTone: "cool",
-      range: "-18°C - -22°C",
-      date: "24/09/2026",
-      chip: "congelados",
-    },
-  ];
+  const filteredFoodRows = foodRows.filter((row) => {
+    const matchesCategory =
+      foodFilter === "todos" || row.chip === foodFilter;
+    const query = foodSearch.trim().toLocaleLowerCase("es");
+    const matchesSearch =
+      !query ||
+      `${row.id} ${row.name} ${row.subtitle}`
+        .toLocaleLowerCase("es")
+        .includes(query);
+    return matchesCategory && matchesSearch;
+  });
 
   const formatDateForApi = (value) => {
     if (!value) return new Date().toLocaleDateString("es-ES");
@@ -506,7 +603,11 @@ export default function App() {
         </div>
       )}
       <header className="topbar">
-        {screen !== "login" && screen !== "register" && screen !== "food" && (
+        {screen !== "login" &&
+          screen !== "register" &&
+          screen !== "food" &&
+          screen !== "setup" &&
+          screen !== "product" && (
           <Button
             icon={theme === "dark" ? "pi pi-sun" : "pi pi-moon"}
             text
@@ -523,7 +624,11 @@ export default function App() {
             }
           />
         )}
-        {screen !== "login" && screen !== "register" && screen !== "food" && (
+        {screen !== "login" &&
+          screen !== "register" &&
+          screen !== "food" &&
+          screen !== "setup" &&
+          screen !== "product" && (
           <span className="device-code">COD: 9NL47</span>
         )}
 
@@ -537,7 +642,9 @@ export default function App() {
         ) : (
           <div
             className={`brand-wrap brand-neutral ${
-              screen === "food" ? "food-brand" : ""
+              ["food", "setup", "product"].includes(screen)
+                ? "workspace-brand"
+                : ""
             }`}
           >
             <div className="logo">
@@ -549,28 +656,22 @@ export default function App() {
         {(screen === "food" ||
           screen === "setup" ||
           screen === "product") && (
-          <div
-            className={`topbar-user ${
-              screen === "food" ? "food-user-controls" : ""
-            }`}
-          >
-            {screen === "food" && (
-              <Button
-                icon={theme === "dark" ? "pi pi-sun" : "pi pi-moon"}
-                className="theme-toggle"
-                aria-label={
-                  theme === "dark"
-                    ? "Activar modo claro"
-                    : "Activar modo oscuro"
-                }
-                aria-pressed={theme === "dark"}
-                onClick={() =>
-                  setTheme((currentTheme) =>
-                    currentTheme === "dark" ? "light" : "dark",
-                  )
-                }
-              />
-            )}
+          <div className="topbar-user workspace-user-controls">
+            <Button
+              icon={theme === "dark" ? "pi pi-sun" : "pi pi-moon"}
+              className="theme-toggle"
+              aria-label={
+                theme === "dark"
+                  ? "Activar modo claro"
+                  : "Activar modo oscuro"
+              }
+              aria-pressed={theme === "dark"}
+              onClick={() =>
+                setTheme((currentTheme) =>
+                  currentTheme === "dark" ? "light" : "dark",
+                )
+              }
+            />
             <button
               type="button"
               className="user-badge"
@@ -828,7 +929,6 @@ export default function App() {
                   <i className="pi pi-clipboard" />
                 </span>
                 <h1>Lista de alimentos</h1>
-                <span className="food-counter">5</span>
               </div>
 
               <Button
@@ -840,23 +940,38 @@ export default function App() {
               />
             </div>
 
-            <p className="food-subtitle">
-              Monitoreo biológico de cadena de frío y trazabilidad térmica según
-              estándar ISO 22000.
-            </p>
-
             <div className="food-toolbar">
               <div className="food-tabs">
-                <button type="button" className="filter-tab active">
+                <button
+                  type="button"
+                  className={`filter-tab ${foodFilter === "todos" ? "active" : ""}`}
+                  aria-pressed={foodFilter === "todos"}
+                  onClick={() => setFoodFilter("todos")}
+                >
                   Todos los Alimentos
                 </button>
-                <button type="button" className="filter-tab">
+                <button
+                  type="button"
+                  className={`filter-tab ${foodFilter === "refrigerados" ? "active" : ""}`}
+                  aria-pressed={foodFilter === "refrigerados"}
+                  onClick={() => setFoodFilter("refrigerados")}
+                >
                   Refrigerados
                 </button>
-                <button type="button" className="filter-tab">
+                <button
+                  type="button"
+                  className={`filter-tab ${foodFilter === "congelados" ? "active" : ""}`}
+                  aria-pressed={foodFilter === "congelados"}
+                  onClick={() => setFoodFilter("congelados")}
+                >
                   Congelados
                 </button>
-                <button type="button" className="filter-tab">
+                <button
+                  type="button"
+                  className={`filter-tab ${foodFilter === "frutas" ? "active" : ""}`}
+                  aria-pressed={foodFilter === "frutas"}
+                  onClick={() => setFoodFilter("frutas")}
+                >
                   Frutas y Verduras
                 </button>
                 <button
@@ -870,9 +985,22 @@ export default function App() {
 
               <div className="food-search">
                 <i className="pi pi-search" aria-hidden="true" />
-                <InputText placeholder="Buscar alimento o ID..." />
+                <InputText
+                  value={foodSearch}
+                  onChange={(event) => setFoodSearch(event.target.value)}
+                  placeholder="Buscar alimento o ID..."
+                />
               </div>
             </div>
+
+            {foodLoadError && (
+              <div className="food-api-message">
+                <Message
+                  severity={foodRows.length ? "warn" : "error"}
+                  text={foodLoadError}
+                />
+              </div>
+            )}
 
             <div className="food-table-panel">
               <div className="food-table-header">
@@ -884,8 +1012,25 @@ export default function App() {
                 <span>ACCIÓN</span>
               </div>
 
-              {foodRows.map((row) => (
-                <div key={row.id} className="food-table-row">
+              {foodLoading && (
+                <div className="food-empty-state" role="status">
+                  <i className="pi pi-spin pi-spinner" aria-hidden="true" />
+                  Cargando alimentos guardados...
+                </div>
+              )}
+
+              {!foodLoading &&
+                !foodLoadError &&
+                filteredFoodRows.length === 0 && (
+                <div className="food-empty-state">
+                  {foodRows.length
+                    ? "No hay alimentos que coincidan con la búsqueda o el filtro."
+                    : "La API no devolvió alimentos registrados."}
+                </div>
+              )}
+
+              {!foodLoading && filteredFoodRows.map((row) => (
+                <div key={row.key} className="food-table-row">
                   <span className="food-id">{row.id}</span>
                   <div className="food-name-cell">
                     <div className="food-avatar">
@@ -920,42 +1065,6 @@ export default function App() {
                   </button>
                 </div>
               ))}
-
-              <div className="food-footer-bar">
-                <div className="food-meta">
-                  <i className="pi pi-info-circle" aria-hidden="true" />
-                  <span>
-                    Mostrando 1 - 5 de 18 registros verificados por Sonda
-                    Digital
-                  </span>
-                </div>
-
-                <div className="pagination">
-                  <button
-                    type="button"
-                    className="page-arrow"
-                    aria-label="Página anterior"
-                  >
-                    <i className="pi pi-angle-left" />
-                  </button>
-                  <button type="button" className="page-number active">
-                    1
-                  </button>
-                  <button type="button" className="page-number">
-                    2
-                  </button>
-                  <button type="button" className="page-number">
-                    3
-                  </button>
-                  <button
-                    type="button"
-                    className="page-arrow"
-                    aria-label="Página siguiente"
-                  >
-                    <i className="pi pi-angle-right" />
-                  </button>
-                </div>
-              </div>
             </div>
           </section>
         )}
