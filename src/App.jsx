@@ -76,11 +76,42 @@ function categorize(food) {
 }
 
 const routes = {
+  "/": "login",
   "/login": "login",
   "/registro": "register",
   "/alimentos": "food",
   "/configuracion": "setup",
   "/dashboard": "dashboard",
+};
+
+const screenMeta = {
+  login: {
+    label: "Acceso",
+    title: "Tu frío bajo control",
+    subtitle:
+      "Monitorea almacenamiento, temperatura y seguridad con una experiencia intuitiva.",
+  },
+  register: {
+    label: "Registro",
+    title: "Crea tu cuenta",
+    subtitle: "Configura tu perfil para comenzar con tu control térmico.",
+  },
+  food: {
+    label: "Alimentos",
+    title: "Ingreso del producto",
+    subtitle: "Clasifica tu alimento y define el rango ideal para su cuidado.",
+  },
+  setup: {
+    label: "Configuración",
+    title: "Tipo de producto",
+    subtitle:
+      "Revisa los rangos recomendados y deja el sistema listo para operar.",
+  },
+  dashboard: {
+    label: "Panel",
+    title: "Estado del contenedor",
+    subtitle: "Control total del estado térmico y del inventario activo.",
+  },
 };
 
 const screenPaths = Object.fromEntries(
@@ -130,6 +161,7 @@ export default function App() {
   };
 
   const info = categories[category];
+  const currentMeta = screenMeta[screen] || screenMeta.login;
 
   const formatDateForApi = (value) => {
     if (!value) return new Date().toLocaleDateString("es-ES");
@@ -329,14 +361,18 @@ export default function App() {
           />
         )}
         {screen !== "login" && <span className="device-code">COD: 9NL47</span>}
-        <div className="logo">
-          Temp<span>Go</span>
+        <div className="brand-wrap">
+          <span className="brand-kicker">{currentMeta.label}</span>
+          <div className="logo">
+            Temp<span>Go</span>
+          </div>
         </div>
       </header>
       <main className="container">
         {screen === "login" && (
           <section className="landing">
-            <div>
+            <div className="hero-copy">
+              <span className="eyebrow">Sistema de monitoreo térmico</span>
               <h1>
                 Tus productos.
                 <br />
@@ -344,13 +380,32 @@ export default function App() {
                 <br />
                 Tu control.
               </h1>
-              <p>
-                Monitorea las condiciones de almacenamiento de manera rápida y
-                sencilla en tu contenedor térmico.
-              </p>
+              <p>{currentMeta.subtitle}</p>
+              <div className="hero-badges">
+                <span>✅ Control inteligente</span>
+                <span>📊 Alerta de temperatura</span>
+                <span>🧊 Seguridad óptima</span>
+              </div>
+              <div className="micro-stats">
+                <div>
+                  <strong>98%</strong>
+                  <span>estabilidad</span>
+                </div>
+                <div>
+                  <strong>24/7</strong>
+                  <span>monitoreo</span>
+                </div>
+                <div>
+                  <strong>3 tipos</strong>
+                  <span>de almacenamiento</span>
+                </div>
+              </div>
             </div>
-            <Card className="form-card">
-              <h2>1. Acceder / Login</h2>
+            <Card className="form-card panel-card">
+              <div className="panel-header">
+                <span className="step-tag">Paso 1</span>
+                <h2>Acceder / Login</h2>
+              </div>
               {message && (
                 <Message severity={message.severity} text={message.text} />
               )}
@@ -396,8 +451,11 @@ export default function App() {
         )}
 
         {screen === "register" && (
-          <Card className="form-card narrow">
-            <h2>2. Registro</h2>
+          <Card className="form-card narrow panel-card">
+            <div className="panel-header">
+              <span className="step-tag">Paso 2</span>
+              <h2>Registro</h2>
+            </div>
             {message && (
               <Message severity={message.severity} text={message.text} />
             )}
@@ -454,8 +512,11 @@ export default function App() {
 
         {screen === "food" && (
           <div className="food-layout">
-            <Card className="form-card temperature-panel">
-              <h2>Temperaturas recomendadas</h2>
+            <Card className="form-card temperature-panel panel-card">
+              <div className="panel-header compact">
+                <span className="step-tag">Recomendaciones</span>
+                <h2>Temperaturas recomendadas</h2>
+              </div>
               <div className="temperature-list">
                 <div className="temperature-item frozen">
                   <div className="info-icon" aria-label="Alimentos congelados">
@@ -487,8 +548,14 @@ export default function App() {
               </div>
             </Card>
 
-            <Card className="form-card narrow" style={{ minHeight: "100%" }}>
-              <h2>3. Ingreso del alimento</h2>
+            <Card
+              className="form-card narrow panel-card"
+              style={{ minHeight: "100%" }}
+            >
+              <div className="panel-header compact">
+                <span className="step-tag">Paso 3</span>
+                <h2>Ingreso del alimento</h2>
+              </div>
               {message && (
                 <Message severity={message.severity} text={message.text} />
               )}
@@ -547,11 +614,14 @@ export default function App() {
 
         {screen === "setup" && (
           <div className="setup-grid">
-            <section>
+            <section className="panel-stack">
               {message && (
                 <Message severity={message.severity} text={message.text} />
               )}
-              <h2>TIPO DE PRODUCTO</h2>
+              <div className="section-headline">
+                <span className="step-tag">Paso 4</span>
+                <h2>Tipo de producto</h2>
+              </div>
               <div className="categories">
                 {Object.entries(categories).map(([key, item]) => (
                   <button
@@ -564,27 +634,27 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <Card>
-                <h3>ALIMENTO REGISTRADO</h3>
+              <Card className="info-surface">
+                <h3>Alimento registrado</h3>
                 <p>{food}</p>
               </Card>
               <div className="status-grid">
                 <Card>
-                  <h3>ENERGÍA</h3>
-                  <strong>⚡ ENCENDIDO</strong>
+                  <h3>Energía</h3>
+                  <strong>⚡ Encendido</strong>
                 </Card>
                 <Card>
-                  <h3>TEMPERATURA IDEAL</h3>
+                  <h3>Temperatura ideal</h3>
                   <strong>{info.ideal}</strong>
                 </Card>
               </div>
             </section>
             <aside className="sidebar">
               <Card>
-                <h3>CÓDIGO</h3>
+                <h3>Código</h3>
                 <strong className="code">9NL47</strong>
                 <Button
-                  label="COPIAR"
+                  label="Copiar"
                   onClick={() => navigator.clipboard?.writeText("9NL47")}
                 />
                 <Button
@@ -595,7 +665,7 @@ export default function App() {
                 />
               </Card>
               <Button
-                label="LISTO"
+                label="Listo"
                 className="full"
                 onClick={() => navigate("dashboard")}
               />
@@ -607,21 +677,21 @@ export default function App() {
           <div className="dashboard">
             <section className="dash-stats">
               <Card>
-                <h3>ENERGÍA</h3>
-                <strong>⚡ ENCENDIDO</strong>
+                <h3>Energía</h3>
+                <strong>⚡ Encendido</strong>
               </Card>
               <Card>
-                <h3>ESTADO</h3>
-                <strong>📶 ÓPTIMO</strong>
+                <h3>Estado</h3>
+                <strong>📶 Óptimo</strong>
               </Card>
               <Card>
-                <h3>TEMPERATURA</h3>
+                <h3>Temperatura</h3>
                 <strong className="temperature">{temperature}°C</strong>
               </Card>
             </section>
-            <section>
+            <section className="panel-stack">
               <Card>
-                <h3>CONTROL</h3>
+                <h3>Control</h3>
                 <div className="range-labels">
                   <span>{info.min}</span>
                   <span>{info.max}</span>
@@ -635,9 +705,9 @@ export default function App() {
               </Card>
               <div className="status-grid">
                 <Card>
-                  <h3>ALARMA</h3>
+                  <h3>Alarma</h3>
                   <strong>0 🔔</strong>
-                  <p>PRODUCTO FUERA DEL RANGO</p>
+                  <p>Producto fuera del rango</p>
                 </Card>
                 <Card>
                   <h3>{info.name}</h3>
