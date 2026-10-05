@@ -154,6 +154,7 @@ export default function App() {
   const [theme, setTheme] = useState("light");
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [userEmail, setUserEmail] = useState(
     () => localStorage.getItem("tempgo_user_email") || "",
   );
@@ -179,6 +180,16 @@ export default function App() {
   useEffect(() => {
     document.title = `TempGo | ${currentMeta.title}`;
   }, [currentMeta.title]);
+
+  useEffect(() => {
+    if (!showSuccessOverlay) return undefined;
+
+    const timeoutId = window.setTimeout(
+      () => setShowSuccessOverlay(false),
+      2200,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [showSuccessOverlay]);
 
   const navigate = (nextScreen) => {
     const nextPath = screenPaths[nextScreen];
@@ -355,16 +366,18 @@ export default function App() {
     }
   };
 
-  const back = () =>
-    navigate(
-      {
-        dashboard: "setup",
-        setup: "food",
-        food: "login",
-        register: "login",
-        product: "setup",
-      }[screen] || "login",
-    );
+  const handleLogout = () => {
+    localStorage.removeItem("tempgo_token");
+    localStorage.removeItem("tempgo_user_email");
+    localStorage.removeItem("tempgo_user_code");
+    setUserEmail("");
+    setUserCode("");
+    setEmail("");
+    setPassword("");
+    setMessage(null);
+    setShowSuccessOverlay(false);
+    navigate("login");
+  };
 
   const handleContinueToProduct = (event) => {
     event.preventDefault();
@@ -414,10 +427,8 @@ export default function App() {
       setRegisterEmail("");
       setRegisterPassword("");
       setConfirmPassword("");
-      setMessage({
-        severity: "success",
-        text: "Inicio de sesión correcto.",
-      });
+      setMessage(null);
+      setShowSuccessOverlay(true);
       navigate("food");
     } catch (error) {
       setMessage({
@@ -455,7 +466,8 @@ export default function App() {
 
       localStorage.setItem("tempgo_token", data.token || "");
       saveUserProfile(email);
-      setMessage({ severity: "success", text: "Inicio de sesión correcto." });
+      setMessage(null);
+      setShowSuccessOverlay(true);
       navigate("food");
     } catch (error) {
       setMessage({
@@ -483,14 +495,32 @@ export default function App() {
           </div>
         </div>
       )}
+      {showSuccessOverlay && (
+        <div className="success-overlay" role="status" aria-live="assertive">
+          <div className="success-overlay-card">
+            <span className="success-overlay-icon" aria-hidden="true">
+              <i className="pi pi-check" />
+            </span>
+            <strong>Inicio de sesión correcto.</strong>
+          </div>
+        </div>
+      )}
       <header className="topbar">
-        {screen !== "login" && screen !== "register" && (
+        {screen !== "login" && screen !== "register" && screen !== "food" && (
           <Button
-            icon="pi pi-arrow-left"
+            icon={theme === "dark" ? "pi pi-sun" : "pi pi-moon"}
             text
             rounded
-            aria-label="Volver"
-            onClick={back}
+            className="theme-toggle"
+            aria-label={
+              theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"
+            }
+            aria-pressed={theme === "dark"}
+            onClick={() =>
+              setTheme((currentTheme) =>
+                currentTheme === "dark" ? "light" : "dark",
+              )
+            }
           />
         )}
         {screen !== "login" && screen !== "register" && screen !== "food" && (
@@ -519,8 +549,28 @@ export default function App() {
         {(screen === "food" ||
           screen === "setup" ||
           screen === "product") && (
-          <div className="topbar-user">
-            <span>Usuario</span>
+          <div
+            className={`topbar-user ${
+              screen === "food" ? "food-user-controls" : ""
+            }`}
+          >
+            {screen === "food" && (
+              <Button
+                icon={theme === "dark" ? "pi pi-sun" : "pi pi-moon"}
+                className="theme-toggle"
+                aria-label={
+                  theme === "dark"
+                    ? "Activar modo claro"
+                    : "Activar modo oscuro"
+                }
+                aria-pressed={theme === "dark"}
+                onClick={() =>
+                  setTheme((currentTheme) =>
+                    currentTheme === "dark" ? "light" : "dark",
+                  )
+                }
+              />
+            )}
             <button
               type="button"
               className="user-badge"
@@ -534,6 +584,7 @@ export default function App() {
             >
               <i className="pi pi-user" />
             </button>
+            <span>Usuario</span>
             {userMenuOpen && (
               <div
                 className="user-profile"
@@ -547,6 +598,14 @@ export default function App() {
                 <strong className="user-profile-code">
                   {userCode || "Se generará al iniciar sesión"}
                 </strong>
+                <button
+                  type="button"
+                  className="user-logout"
+                  onClick={handleLogout}
+                >
+                  <i className="pi pi-sign-out" aria-hidden="true" />
+                  Cerrar sesión
+                </button>
               </div>
             )}
           </div>
@@ -763,12 +822,6 @@ export default function App() {
 
         {screen === "food" && (
           <section className="food-screen">
-            {message?.severity === "success" &&
-              message.text === "Inicio de sesión correcto." && (
-                <div className="food-login-message" role="status">
-                  <Message severity={message.severity} text={message.text} />
-                </div>
-              )}
             <div className="food-header-row">
               <div className="food-title-wrap">
                 <span className="food-header-icon" aria-hidden="true">
