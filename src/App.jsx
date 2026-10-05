@@ -135,7 +135,6 @@ export default function App() {
   );
   const [email, setEmail] = useState("usuario@tempgo.com");
   const [password, setPassword] = useState("123456");
-  const [companyName, setCompanyName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -341,12 +340,7 @@ export default function App() {
   const handleRegister = async (event) => {
     event.preventDefault();
 
-    if (
-      !companyName.trim() ||
-      !registerEmail.trim() ||
-      !registerPassword ||
-      !confirmPassword
-    ) {
+    if (!registerEmail.trim() || !registerPassword || !confirmPassword) {
       setMessage({
         severity: "warn",
         text: "Completa todos los campos para registrarte.",
@@ -365,7 +359,6 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre: companyName.trim(),
           email: registerEmail.trim(),
           password: registerPassword,
           edad: 25,
@@ -381,7 +374,6 @@ export default function App() {
       }
 
       localStorage.setItem("tempgo_token", data.token || "");
-      setCompanyName("");
       setEmail(registerEmail.trim());
       setPassword(registerPassword);
       setRegisterEmail("");
@@ -613,37 +605,19 @@ export default function App() {
 
               <form onSubmit={handleRegister} className="register-form">
                 <label>
-                  Nombre de Instalación o Empresa
+                  Correo:
                   <div className="input-shell">
-                    <i className="pi pi-building" aria-hidden="true" />
+                    <i className="pi pi-envelope" aria-hidden="true" />
                     <InputText
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
+                      type="email"
+                      value={registerEmail}
+                      onChange={(e) => setRegisterEmail(e.target.value)}
                       disabled={busy}
-                      placeholder="p. ej. Frigorífico Central Andino"
+                      placeholder="ejemplo@empresa.com"
                       required
                     />
                   </div>
                 </label>
-
-                <div className="register-row">
-                  <label>
-                    Correo:
-                    <div className="input-shell">
-                      <i className="pi pi-envelope" aria-hidden="true" />
-                      <InputText
-                        type="email"
-                        value={registerEmail}
-                        onChange={(e) => setRegisterEmail(e.target.value)}
-                        disabled={busy}
-                        placeholder="ejemplo@empresa.com"
-                        required
-                      />
-                    </div>
-                  </label>
-                  <span className="inline-hint">Acceso HACCP</span>
-                </div>
 
                 <label>
                   Contraseña:
@@ -689,10 +663,6 @@ export default function App() {
                   disabled={busy}
                 />
 
-                <div className="register-divider">
-                  O REGISTRAR CON CREDENCIAL IOT
-                </div>
-
                 <div className="register-login">
                   <span>¿Ya tienes una cuenta activa?</span>
                   <button
@@ -705,21 +675,6 @@ export default function App() {
                   </button>
                 </div>
               </form>
-            </div>
-
-            <div className="register-footer">
-              <span className="trust-badge">
-                <i className="pi pi-shield" />
-                <small>Certified TLS 1.3 / AES-256</small>
-              </span>
-              <span className="trust-badge">
-                <i className="pi pi-check-circle" />
-                <small>HACCP Food-Safety Validated</small>
-              </span>
-              <span className="trust-badge">
-                <i className="pi pi-chart-line" />
-                <small>Redundancia Multi-Sensor 99.9%</small>
-              </span>
             </div>
           </section>
         )}
