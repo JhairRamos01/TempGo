@@ -848,12 +848,12 @@ export default function App() {
               )}
 
               <form onSubmit={handleRegister} className="register-form">
-                <label>
-                  Nombre:
+                <label aria-label="Nombre">
                   <div className="input-shell">
                     <i className="pi pi-user" aria-hidden="true" />
                     <InputText
                       type="text"
+                      aria-label="Nombre"
                       value={registerName}
                       onChange={(e) => setRegisterName(e.target.value)}
                       disabled={busy}
