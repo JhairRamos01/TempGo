@@ -225,6 +225,7 @@ export default function App() {
   );
   const [email, setEmail] = useState("usuario@tempgo.com");
   const [password, setPassword] = useState("123456");
+  const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -484,7 +485,12 @@ export default function App() {
   const handleRegister = async (event) => {
     event.preventDefault();
 
-    if (!registerEmail.trim() || !registerPassword || !confirmPassword) {
+    if (
+      !registerName.trim() ||
+      !registerEmail.trim() ||
+      !registerPassword ||
+      !confirmPassword
+    ) {
       setMessage({
         severity: "warn",
         text: "Completa todos los campos para registrarte.",
@@ -499,13 +505,13 @@ export default function App() {
 
     setBusy(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/register`, {
+      const response = await fetch(`${API_BASE}/usuarios`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          nombre: registerName.trim(),
           email: registerEmail.trim(),
           password: registerPassword,
-          edad: 25,
         }),
       });
 
@@ -518,9 +524,11 @@ export default function App() {
       }
 
       localStorage.setItem("tempgo_token", data.token || "");
+      setUserEmail(registerEmail.trim());
       saveUserProfile(registerEmail);
       setEmail(registerEmail.trim());
       setPassword(registerPassword);
+      setRegisterName("");
       setRegisterEmail("");
       setRegisterPassword("");
       setConfirmPassword("");
@@ -840,6 +848,22 @@ export default function App() {
               )}
 
               <form onSubmit={handleRegister} className="register-form">
+                <label>
+                  Nombre:
+                  <div className="input-shell">
+                    <i className="pi pi-user" aria-hidden="true" />
+                    <InputText
+                      type="text"
+                      value={registerName}
+                      onChange={(e) => setRegisterName(e.target.value)}
+                      disabled={busy}
+                      placeholder="Tu nombre"
+                      autoComplete="name"
+                      required
+                    />
+                  </div>
+                </label>
+
                 <label>
                   Correo:
                   <div className="input-shell">
