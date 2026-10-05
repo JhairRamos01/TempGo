@@ -130,6 +130,13 @@ function screenFromPath(pathname) {
   return routes[pathname] || "login";
 }
 
+function generateUserCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const randomValues = new Uint8Array(5);
+  window.crypto.getRandomValues(randomValues);
+  return Array.from(randomValues, (value) => alphabet[value % alphabet.length]).join("");
+}
+
 export default function App() {
   const [screen, setScreen] = useState(() =>
     screenFromPath(window.location.pathname),
@@ -147,6 +154,13 @@ export default function App() {
   const [theme, setTheme] = useState("light");
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [userEmail, setUserEmail] = useState(
+    () => localStorage.getItem("tempgo_user_email") || "",
+  );
+  const [userCode, setUserCode] = useState(
+    () => localStorage.getItem("tempgo_user_code") || "",
+  );
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const currentMeta = screenMeta[screen] || screenMeta.login;
 
   useEffect(() => {
@@ -171,6 +185,25 @@ export default function App() {
     if (!nextPath || nextScreen === screen) return;
     window.history.pushState({}, "", nextPath);
     setScreen(nextScreen);
+    setUserMenuOpen(false);
+  };
+
+  const saveUserProfile = (address) => {
+    const normalizedEmail = address.trim();
+    const storedEmail = localStorage.getItem("tempgo_user_email");
+    let code = localStorage.getItem("tempgo_user_code");
+
+    if (
+      storedEmail?.toLowerCase() !== normalizedEmail.toLowerCase() ||
+      !code
+    ) {
+      code = generateUserCode();
+    }
+
+    localStorage.setItem("tempgo_user_email", normalizedEmail);
+    localStorage.setItem("tempgo_user_code", code);
+    setUserEmail(normalizedEmail);
+    setUserCode(code);
   };
 
   const info = categories[category];
@@ -375,6 +408,7 @@ export default function App() {
       }
 
       localStorage.setItem("tempgo_token", data.token || "");
+      saveUserProfile(registerEmail);
       setEmail(registerEmail.trim());
       setPassword(registerPassword);
       setRegisterEmail("");
@@ -382,9 +416,9 @@ export default function App() {
       setConfirmPassword("");
       setMessage({
         severity: "success",
-        text: "Registro exitoso. Ya puedes iniciar sesión.",
+        text: "Inicio de sesión correcto.",
       });
-      navigate("login");
+      navigate("food");
     } catch (error) {
       setMessage({
         severity: "warn",
@@ -420,6 +454,7 @@ export default function App() {
       }
 
       localStorage.setItem("tempgo_token", data.token || "");
+      saveUserProfile(email);
       setMessage({ severity: "success", text: "Inicio de sesión correcto." });
       navigate("food");
     } catch (error) {
@@ -458,7 +493,7 @@ export default function App() {
             onClick={back}
           />
         )}
-        {screen !== "login" && screen !== "register" && (
+        {screen !== "login" && screen !== "register" && screen !== "food" && (
           <span className="device-code">COD: 9NL47</span>
         )}
 
@@ -470,7 +505,11 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <div className="brand-wrap brand-neutral">
+          <div
+            className={`brand-wrap brand-neutral ${
+              screen === "food" ? "food-brand" : ""
+            }`}
+          >
             <div className="logo">
               Temp<span>Go</span>
             </div>
@@ -482,9 +521,34 @@ export default function App() {
           screen === "product") && (
           <div className="topbar-user">
             <span>Usuario</span>
-            <button type="button" className="user-badge" aria-label="Usuario">
+            <button
+              type="button"
+              className="user-badge"
+              aria-label="Mostrar datos de usuario"
+              aria-expanded={userMenuOpen}
+              aria-controls="user-profile"
+              onClick={() => {
+                if (!userCode) saveUserProfile(userEmail || email);
+                setUserMenuOpen((open) => !open);
+              }}
+            >
               <i className="pi pi-user" />
             </button>
+            {userMenuOpen && (
+              <div
+                className="user-profile"
+                id="user-profile"
+                role="region"
+                aria-label="Datos de usuario"
+              >
+                <span className="user-profile-label">Correo electrónico</span>
+                <strong>{userEmail || email}</strong>
+                <span className="user-profile-label">Código</span>
+                <strong className="user-profile-code">
+                  {userCode || "Se generará al iniciar sesión"}
+                </strong>
+              </div>
+            )}
           </div>
         )}
       </header>
@@ -699,6 +763,12 @@ export default function App() {
 
         {screen === "food" && (
           <section className="food-screen">
+            {message?.severity === "success" &&
+              message.text === "Inicio de sesión correcto." && (
+                <div className="food-login-message" role="status">
+                  <Message severity={message.severity} text={message.text} />
+                </div>
+              )}
             <div className="food-header-row">
               <div className="food-title-wrap">
                 <span className="food-header-icon" aria-hidden="true">

@@ -161,6 +161,7 @@ img {
 }
 
 .topbar-user {
+  position: relative;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -179,6 +180,54 @@ img {
   background: linear-gradient(135deg, #4cb6ff, #1a88e5);
   color: #fff;
   box-shadow: 0 10px 18px rgba(26, 136, 229, 0.25);
+}
+
+.user-profile {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  min-width: min(290px, calc(100vw - 32px));
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid rgba(145, 164, 192, 0.3);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 16px 36px rgba(20, 40, 70, 0.16);
+}
+
+.user-profile strong {
+  overflow-wrap: anywhere;
+  margin-bottom: 0.35rem;
+}
+
+.user-profile-label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.user-profile-code {
+  color: var(--primary-dark);
+  font-size: 1.2rem;
+  letter-spacing: 0.12em;
+}
+
+.app.dark .user-profile {
+  border-color: rgba(152, 190, 221, 0.2);
+  background: #102f47;
+  color: #edf6ff;
+}
+
+.food-brand .logo {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  color: var(--primary-dark);
 }
 
 .brand-kicker {
@@ -545,6 +594,10 @@ img {
 
 .login-message {
   margin-top: 0.5rem;
+}
+
+.food-login-message {
+  margin: 0 0 1rem;
 }
 
 .hero-copy {
