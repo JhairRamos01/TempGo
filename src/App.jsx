@@ -14,11 +14,13 @@ const categories = {
   refrigerados: {
     name: "PRODUCTOS REFRIGERADOS",
     ideal: "0°C - 4°C",
-    min: "-10°C",
-    max: "10°C",
-    low: "-1°C",
+    min: "0°C",
+    max: "4°C",
+    minValue: 0,
+    maxValue: 4,
+    low: "0°C",
     idealLegend: "0 → 4°C",
-    high: "5°C",
+    high: "4°C",
     temp: 3,
     food: "Atún",
     image: "/img/imagen1.jpeg",
@@ -26,12 +28,14 @@ const categories = {
   },
   congelados: {
     name: "PRODUCTOS CONGELADOS",
-    ideal: "-22°C - -16°C",
-    min: "-30°C",
-    max: "-10°C",
-    low: "-23°C",
-    idealLegend: "-22 → -16°C",
-    high: "-15°C",
+    ideal: "-22°C - -18°C",
+    min: "-22°C",
+    max: "-18°C",
+    minValue: -22,
+    maxValue: -18,
+    low: "-22°C",
+    idealLegend: "-22 → -18°C",
+    high: "-18°C",
     temp: -19,
     food: "Pollo",
     image: "/img/imagen2.jpeg",
@@ -40,11 +44,13 @@ const categories = {
   frutas: {
     name: "FRUTAS Y VERDURAS",
     ideal: "8°C - 12°C",
-    min: "0°C",
-    max: "20°C",
-    low: "7°C",
+    min: "8°C",
+    max: "12°C",
+    minValue: 8,
+    maxValue: 12,
+    low: "8°C",
     idealLegend: "8 → 12°C",
-    high: "13°C",
+    high: "12°C",
     temp: 9,
     food: "Fresa",
     image: "/img/imagen3.jpeg",
@@ -59,20 +65,39 @@ const apiRanges = {
 };
 
 function categorize(food) {
-  const name = food.toLocaleLowerCase("es");
+  const tokens = food
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  const hasAny = (keywords) => keywords.some((keyword) => tokens.includes(keyword));
+
   if (
-    /(fresa|fruta|manzana|pl[aá]tano|uva|br[oó]coli|verdura|tomate|lechuga|zanahoria|pera|durazno|naranja|lim[oó]n)/.test(
-      name,
-    )
+    tokens.some((token) => token.startsWith("congelad")) ||
+    hasAny(["pollo", "carne", "res", "cerdo", "pavo", "cordero", "helado", "nuggets"])
+  )
+    return "congelados";
+  if (
+    hasAny([
+      "fresa", "fresas", "fruta", "frutas", "manzana", "manzanas", "platano",
+      "platanos", "uva", "uvas", "brocoli", "verdura", "verduras", "tomate",
+      "tomates", "lechuga", "zanahoria", "zanahorias", "pera", "peras",
+      "durazno", "duraznos", "naranja", "naranjas", "limon", "limones",
+      "mango", "mangos", "papaya", "papayas", "pepino", "pepinos", "cebolla",
+      "cebollas", "papa", "papas", "maiz", "calabaza", "calabacita",
+    ])
   )
     return "frutas";
   if (
-    /(pescado|at[uú]n|trucha|marisco|queso|leche|yogurt|camar[oó]n|pulpo|marino)/.test(
-      name,
-    )
+    hasAny([
+      "pescado", "pescados", "atun", "trucha", "truchas", "marisco", "mariscos",
+      "queso", "quesos", "leche", "yogurt", "yogur", "camaron", "camarones",
+      "pulpo", "pulpos", "salmon", "salmones", "crema", "mantequilla",
+    ])
   )
     return "refrigerados";
-  return "congelados";
+  return null;
 }
 
 const routes = {
@@ -231,7 +256,7 @@ export default function App() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [food, setFood] = useState("Fresa");
   const [temperature, setTemperature] = useState(10);
-  const [range, setRange] = useState(2);
+  const [range, setRange] = useState(categories.frutas.temp);
   const [date, setDate] = useState(new Date());
   const [category, setCategory] = useState("frutas");
   const [theme, setTheme] = useState("light");
@@ -431,7 +456,26 @@ export default function App() {
 
   const submitFood = async (event) => {
     event.preventDefault();
-    const selected = categorize(food);
+    const selected = categorize(food.trim());
+    if (!selected) {
+      setMessage({
+        severity: "warn",
+        text: "No se pudo identificar el tipo de alimento. Ingresa un alimento refrigerado, congelado, fruta o verdura.",
+      });
+      return;
+    }
+    if (
+      !Number.isFinite(temperature) ||
+      temperature < categories[selected].minValue ||
+      temperature > categories[selected].maxValue
+    ) {
+      setMessage({
+        severity: "warn",
+        text: `La temperatura debe estar entre ${categories[selected].min} y ${categories[selected].max} para ${categories[selected].name.toLocaleLowerCase("es")}.`,
+      });
+      return;
+    }
+
     setCategory(selected);
     setBusy(true);
     setMessage(null);
@@ -495,7 +539,42 @@ export default function App() {
 
   const handleContinueToProduct = (event) => {
     event.preventDefault();
+
+    const selected = categorize(food.trim());
+    if (!selected) {
+      setMessage({
+        severity: "warn",
+        text: "Ingresa un alimento reconocido para verificar su categoría.",
+      });
+      return;
+    }
+    if (selected !== category) {
+      setMessage({
+        severity: "warn",
+        text: `“${food.trim()}” corresponde a ${categories[selected].name.toLocaleLowerCase("es")}. Selecciona esa categoría para continuar.`,
+      });
+      return;
+    }
+    if (
+      !Number.isFinite(temperature) ||
+      temperature < info.minValue ||
+      temperature > info.maxValue
+    ) {
+      setMessage({
+        severity: "warn",
+        text: `La temperatura debe estar entre ${info.min} y ${info.max} para ${info.name.toLocaleLowerCase("es")}.`,
+      });
+      return;
+    }
+
+    setMessage(null);
     navigate("product");
+  };
+
+  const handleCategoryChange = (nextCategory) => {
+    setCategory(nextCategory);
+    setRange(categories[nextCategory].temp);
+    setMessage(null);
   };
 
   const handleRegister = async (event) => {
@@ -1150,7 +1229,7 @@ export default function App() {
                       key={key}
                       type="button"
                       className={`range-option ${category === key ? "selected" : ""}`}
-                      onClick={() => setCategory(key)}
+                      onClick={() => handleCategoryChange(key)}
                     >
                       <span className={`range-dot ${key}`} aria-hidden="true" />
                       <div className="range-copy">
@@ -1193,20 +1272,44 @@ export default function App() {
                   <label className="field-block">
                     <span className="field-label">Alimento Específico :</span>
                     <div className="chip-suggestions">
-                      <button type="button" className="suggestion-chip">
+                      <button
+                        type="button"
+                        className="suggestion-chip"
+                        onClick={() => {
+                          setFood("Salmón");
+                          setMessage(null);
+                        }}
+                      >
                         Salmón
                       </button>
-                      <button type="button" className="suggestion-chip">
+                      <button
+                        type="button"
+                        className="suggestion-chip"
+                        onClick={() => {
+                          setFood("Manzana");
+                          setMessage(null);
+                        }}
+                      >
                         Manzana
                       </button>
-                      <button type="button" className="suggestion-chip">
+                      <button
+                        type="button"
+                        className="suggestion-chip"
+                        onClick={() => {
+                          setFood("Pollo Congelado");
+                          setMessage(null);
+                        }}
+                      >
                         Pollo Congelado
                       </button>
                     </div>
                     <div className="field-input-wrap with-icon">
                       <InputText
                         value={food}
-                        onChange={(e) => setFood(e.target.value)}
+                        onChange={(e) => {
+                          setFood(e.target.value);
+                          setMessage(null);
+                        }}
                         disabled={busy}
                         placeholder="Ej. Salmón fresco, manzana, pollo..."
                         required
@@ -1232,8 +1335,8 @@ export default function App() {
                         onValueChange={(e) => setTemperature(e.value)}
                         disabled={busy}
                         required
-                        min={-30}
-                        max={30}
+                        min={info.minValue}
+                        max={info.maxValue}
                         step={0.1}
                       />
                       <span className="unit">°C</span>
@@ -1246,9 +1349,9 @@ export default function App() {
                         Rango de Temperatura :
                       </span>
                       <div className="range-values">
-                        <span>-30°C</span>
-                        <span>0°C</span>
-                        <span>+30°C</span>
+                        <span>{info.min}</span>
+                        <span>{info.idealLegend}</span>
+                        <span>{info.max}</span>
                       </div>
                     </div>
                     <div className="temperature-slider-wrap">
@@ -1256,15 +1359,15 @@ export default function App() {
                         value={range}
                         onChange={(e) => setRange(e.value)}
                         disabled={busy}
-                        min={-30}
-                        max={30}
+                        min={info.minValue}
+                        max={info.maxValue}
                         step={1}
                       />
                     </div>
                     <div className="slider-labels">
-                      <span>Congelación (-22° a -18°)</span>
-                      <span>Frescos (0° a 4°)</span>
-                      <span>Vegetales (8° a 12°)</span>
+                      <span>{info.name}</span>
+                      <span>{info.ideal}</span>
+                      <span>Temperatura permitida</span>
                     </div>
                   </label>
 
