@@ -151,6 +151,8 @@ const screenPaths = Object.fromEntries(
   Object.entries(routes).map(([path, screen]) => [screen, path]),
 );
 
+const protectedScreens = new Set(["food", "setup", "product", "dashboard"]);
+
 function screenFromPath(pathname) {
   return routes[pathname] || "login";
 }
@@ -344,11 +346,27 @@ function normalizeFoodRecords(payload, categoryKey) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState(() =>
-    screenFromPath(window.location.pathname),
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () =>
+      localStorage.getItem("tempgo_authenticated") === "true" ||
+      Boolean(localStorage.getItem("tempgo_token")),
   );
-  const [email, setEmail] = useState("usuario@tempgo.com");
-  const [password, setPassword] = useState("123456");
+  const [screen, setScreen] = useState(() => {
+    const requestedScreen = screenFromPath(window.location.pathname);
+    const hasStoredSession =
+      localStorage.getItem("tempgo_authenticated") === "true" ||
+      Boolean(localStorage.getItem("tempgo_token"));
+    return protectedScreens.has(requestedScreen) && !hasStoredSession
+      ? "login"
+      : requestedScreen;
+  });
+  const [email, setEmail] = useState(
+    () => localStorage.getItem("tempgo_remembered_email") || "",
+  );
+  const [password, setPassword] = useState("");
+  const [rememberUser, setRememberUser] = useState(
+    () => Boolean(localStorage.getItem("tempgo_remembered_email")),
+  );
   const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
@@ -379,8 +397,15 @@ export default function App() {
   const currentMeta = screenMeta[screen] || screenMeta.login;
 
   useEffect(() => {
-    const handlePopState = () =>
-      setScreen(screenFromPath(window.location.pathname));
+    const handlePopState = () => {
+      const requestedScreen = screenFromPath(window.location.pathname);
+      if (protectedScreens.has(requestedScreen) && !isAuthenticated) {
+        window.history.replaceState({}, "", screenPaths.login);
+        setScreen("login");
+        return;
+      }
+      setScreen(requestedScreen);
+    };
     const currentPath = screenPaths[screen];
 
     if (window.location.pathname !== currentPath) {
@@ -389,7 +414,7 @@ export default function App() {
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [screen]);
+  }, [screen, isAuthenticated]);
 
   useEffect(() => {
     document.title = `TempGo | ${currentMeta.title}`;
@@ -628,17 +653,21 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("tempgo_token");
+    localStorage.removeItem("tempgo_authenticated");
     localStorage.removeItem("tempgo_user_name");
     localStorage.removeItem("tempgo_user_email");
     localStorage.removeItem("tempgo_user_code");
+    setIsAuthenticated(false);
     setUserName("");
     setUserEmail("");
     setUserCode("");
-    setEmail("");
+    setEmail(localStorage.getItem("tempgo_remembered_email") || "");
     setPassword("");
     setMessage(null);
     setShowSuccessOverlay(false);
-    navigate("login");
+    setUserMenuOpen(false);
+    window.history.replaceState({}, "", screenPaths.login);
+    setScreen("login");
   };
 
   const handleCategoryChange = (nextCategory) => {
@@ -697,6 +726,8 @@ export default function App() {
       }
 
       localStorage.setItem("tempgo_token", data.token || "");
+      localStorage.setItem("tempgo_authenticated", "true");
+      setIsAuthenticated(true);
       saveUserProfile(registerEmail, registerName);
       setEmail(registerEmail.trim());
       setPassword(registerPassword);
@@ -742,6 +773,8 @@ export default function App() {
       }
 
       localStorage.setItem("tempgo_token", data.token || "");
+      localStorage.setItem("tempgo_authenticated", "true");
+      setIsAuthenticated(true);
       saveUserProfile(
         email,
         data.nombre || data.usuario?.nombre || data.user?.nombre || "",
@@ -950,7 +983,20 @@ export default function App() {
                     <InputText
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(event) => {
+                        const nextEmail = event.target.value;
+                        setEmail(nextEmail);
+                        if (rememberUser) {
+                          if (nextEmail.trim()) {
+                            localStorage.setItem(
+                              "tempgo_remembered_email",
+                              nextEmail.trim(),
+                            );
+                          } else {
+                            localStorage.removeItem("tempgo_remembered_email");
+                          }
+                        }
+                      }}
                       disabled={busy}
                       placeholder="ejemplo@empresa.com"
                       required
@@ -976,7 +1022,25 @@ export default function App() {
 
                 <div className="login-options">
                   <label className="remember-box">
-                    <input type="checkbox" />
+                    <input
+                      type="checkbox"
+                      checked={rememberUser}
+                      disabled={busy}
+                      onChange={(event) => {
+                        const shouldRemember = event.target.checked;
+                        setRememberUser(shouldRemember);
+                        if (shouldRemember && email.trim()) {
+                          localStorage.setItem(
+                            "tempgo_remembered_email",
+                            email.trim(),
+                          );
+                        } else if (shouldRemember) {
+                          localStorage.removeItem("tempgo_remembered_email");
+                        } else if (!shouldRemember) {
+                          localStorage.removeItem("tempgo_remembered_email");
+                        }
+                      }}
+                    />
                     <span>Recordar usuario</span>
                   </label>
                   <button type="button" className="link-button">
