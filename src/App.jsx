@@ -256,7 +256,6 @@ export default function App() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [food, setFood] = useState("Fresa");
   const [temperature, setTemperature] = useState(10);
-  const [range, setRange] = useState(categories.frutas.temp);
   const [date, setDate] = useState(new Date());
   const [category, setCategory] = useState("frutas");
   const [theme, setTheme] = useState("light");
@@ -573,7 +572,7 @@ export default function App() {
 
   const handleCategoryChange = (nextCategory) => {
     setCategory(nextCategory);
-    setRange(categories[nextCategory].temp);
+    setTemperature(categories[nextCategory].temp);
     setMessage(null);
   };
 
@@ -1202,17 +1201,7 @@ export default function App() {
                 </span>
                 <div>
                   <h1>Registro Rápido de Alimentos</h1>
-                  <p>
-                    Mantenimiento de cadena de frío y trazabilidad térmica según
-                    normativa HACCP
-                  </p>
                 </div>
-              </div>
-
-              <div className="module-pill">
-                <i className="pi pi-check" />
-                <span>Módulo</span>
-                <strong>Verificado</strong>
               </div>
             </div>
 
@@ -1240,20 +1229,11 @@ export default function App() {
                   ))}
                 </div>
 
-                <div className="range-panel-footer">
-                  <span>
-                    <i className="pi pi-info-circle" /> Via Sonda Digital
-                  </span>
-                  <span>
-                    <i className="pi pi-shield" /> HACCP Cert
-                  </span>
-                </div>
               </aside>
 
               <div className="config-form-panel">
                 <div className="config-form-header">
                   <div className="panel-title-with-icon">
-                    <i className="pi pi-plus-circle" aria-hidden="true" />
                     <span>Ingresar alimento :</span>
                   </div>
                   <span className="new-record">Nuevo Registro</span>
@@ -1332,7 +1312,9 @@ export default function App() {
                     <div className="field-input-wrap compact-value">
                       <InputNumber
                         value={temperature}
-                        onValueChange={(e) => setTemperature(e.value)}
+                        onValueChange={(e) => {
+                          if (e.value !== null) setTemperature(e.value);
+                        }}
                         disabled={busy}
                         required
                         min={info.minValue}
@@ -1356,8 +1338,8 @@ export default function App() {
                     </div>
                     <div className="temperature-slider-wrap">
                       <Slider
-                        value={range}
-                        onChange={(e) => setRange(e.value)}
+                        value={temperature}
+                        onChange={(e) => setTemperature(e.value)}
                         disabled={busy}
                         min={info.minValue}
                         max={info.maxValue}
