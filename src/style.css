@@ -1291,8 +1291,19 @@ label {
 }
 
 .date-cell {
+  display: grid;
+  gap: 0.3rem;
   color: #3e4f65;
   font-weight: 600;
+}
+
+.food-origin {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #758aa5;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .table-arrow {
@@ -1362,7 +1373,8 @@ label {
 }
 
 .app.dark .food-name-cell small,
-.app.dark .temp-status {
+.app.dark .temp-status,
+.app.dark .food-origin {
   color: #a9bfd3;
 }
 
@@ -1775,10 +1787,34 @@ label {
   font-weight: 800;
 }
 
+.temp-badge-group button {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
 .temp-badge.negative,
 .temp-badge.positive {
   background: rgba(10, 140, 201, 0.08);
   color: #0d7ed7;
+}
+
+.temp-badge-group button:not(:disabled):hover {
+  background: rgba(10, 140, 201, 0.18);
+}
+
+.temp-badge-group button:focus-visible {
+  outline: 2px solid #0d88df;
+  outline-offset: 2px;
+}
+
+.temp-badge-group button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .temp-badge.status {
@@ -1813,6 +1849,19 @@ label {
   background: #0f89d8 !important;
   border: 3px solid #fff !important;
   box-shadow: 0 0 0 2px rgba(27, 149, 236, 0.2);
+}
+
+.slider-current-value {
+  display: block;
+  margin: 0.25rem 0 0.55rem;
+  color: #6d7f93;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.slider-current-value strong {
+  color: #0f89d8;
+  font-size: 0.85rem;
 }
 
 .slider-labels {

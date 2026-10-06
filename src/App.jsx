@@ -162,6 +162,83 @@ function generateUserCode() {
   return Array.from(randomValues, (value) => alphabet[value % alphabet.length]).join("");
 }
 
+function formatRegistrationDate(value) {
+  if (value === undefined || value === null || value === "") {
+    return "Fecha no disponible";
+  }
+
+  let date;
+  if (typeof value === "string") {
+    const dateOnlyMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    date = dateOnlyMatch
+      ? new Date(
+          Number(dateOnlyMatch[3]),
+          Number(dateOnlyMatch[2]) - 1,
+          Number(dateOnlyMatch[1]),
+        )
+      : new Date(value);
+  } else {
+    date = new Date(value);
+  }
+
+  if (Number.isNaN(date.getTime())) return "Fecha no disponible";
+
+  const hasTime =
+    typeof value !== "string" ||
+    /T\d{2}:\d{2}| \d{2}:\d{2}/.test(value);
+  return new Intl.DateTimeFormat("es-ES", {
+    dateStyle: "medium",
+    ...(hasTime ? { timeStyle: "short" } : {}),
+  }).format(date);
+}
+
+function normalizeOrigin(countryValue, countryCodeValue) {
+  const country =
+    countryValue && typeof countryValue === "object" ? countryValue : null;
+  const countryNameCandidate =
+    (typeof countryValue === "string" && countryValue) ||
+    country?.nombre ||
+    country?.name ||
+    country?.pais ||
+    country?.country ||
+    "";
+  const countryName =
+    typeof countryNameCandidate === "string"
+      ? countryNameCandidate.trim()
+      : "";
+  const rawCountryCode =
+    countryCodeValue ||
+    country?.codigo ||
+    country?.code ||
+    country?.iso ||
+    country?.iso2 ||
+    (/^[a-z]{2}$/i.test(countryName)
+      ? countryName
+      : "");
+  const countryCode =
+    typeof rawCountryCode === "string" &&
+    /^[a-z]{2}$/i.test(rawCountryCode.trim())
+      ? rawCountryCode.trim().toUpperCase()
+      : "";
+  const name =
+    countryCode && (!countryName || countryName.toUpperCase() === countryCode)
+      ? new Intl.DisplayNames(["es"], { type: "region" }).of(countryCode)
+      : countryName;
+  const flag = countryCode
+    ? String.fromCodePoint(
+        ...Array.from(countryCode, (letter) => letter.charCodeAt(0) + 127397),
+      )
+    : "🌍";
+
+  return {
+    name:
+      typeof name === "string" && name.trim()
+        ? name.trim()
+        : "Origen no informado",
+    flag,
+  };
+}
+
 function normalizeFoodRecords(payload, categoryKey) {
   const recordCollections = [
     "data",
@@ -220,6 +297,27 @@ function normalizeFoodRecords(payload, categoryKey) {
       record.created_at ??
       record.fecha ??
       record.date;
+    const origin = normalizeOrigin(
+      record.pais_origen ??
+        record.país_origen ??
+        record.country_of_origin ??
+          record.origin_country_name ??
+          record.country_origin ??
+          record.origin_country ??
+          record.pais_origen_nombre ??
+          record.pais_de_origen ??
+          record.pais ??
+          record.country,
+      record.codigo_pais_origen ??
+          record.codigo_iso_pais ??
+          record.pais_origen_codigo ??
+          record.codigo_iso_pais_origen ??
+          record.country_code ??
+          record.country_origin_code ??
+          record.origin_country_code ??
+          record.country_iso2 ??
+          record.iso_country_code,
+    );
 
     return {
       id: idValue ? `#${idValue.replace(/^#/, "")}` : "—",
@@ -238,7 +336,8 @@ function normalizeFoodRecords(payload, categoryKey) {
       status: statusByCategory[categoryKey],
       statusTone: toneByCategory[categoryKey],
       range: range === undefined || range === null ? "—" : String(range),
-      date: date === undefined || date === null ? "—" : String(date),
+      date: formatRegistrationDate(date),
+      origin,
       chip: categoryKey,
     };
   });
@@ -463,32 +562,38 @@ export default function App() {
       });
       return;
     }
+    if (selected !== category) {
+      setMessage({
+        severity: "warn",
+        text: `“${food.trim()}” corresponde a ${categories[selected].name.toLocaleLowerCase("es")}. Selecciona esa categoría para continuar.`,
+      });
+      return;
+    }
     if (
       !Number.isFinite(temperature) ||
-      temperature < categories[selected].minValue ||
-      temperature > categories[selected].maxValue
+      temperature < categories[category].minValue ||
+      temperature > categories[category].maxValue
     ) {
       setMessage({
         severity: "warn",
-        text: `La temperatura debe estar entre ${categories[selected].min} y ${categories[selected].max} para ${categories[selected].name.toLocaleLowerCase("es")}.`,
+        text: `La temperatura debe estar entre ${categories[category].min} y ${categories[category].max} para ${categories[category].name.toLocaleLowerCase("es")}.`,
       });
       return;
     }
 
-    setCategory(selected);
     setBusy(true);
     setMessage(null);
 
     try {
       const response = await fetch(
-        `${API_BASE}/${categories[selected].endpoint}`,
+        `${API_BASE}/${categories[category].endpoint}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             alimento_especifico: food.trim(),
             temperatura: Number(temperature),
-            rango: apiRanges[selected],
+            rango: apiRanges[category],
             fecha_creacion: formatDateForApi(date),
           }),
         },
@@ -510,7 +615,6 @@ export default function App() {
         severity: "success",
         text: `“${food}” se registró correctamente.`,
       });
-      navigate("setup");
     } catch (error) {
       setMessage({
         severity: "warn",
@@ -536,44 +640,18 @@ export default function App() {
     navigate("login");
   };
 
-  const handleContinueToProduct = (event) => {
-    event.preventDefault();
-
-    const selected = categorize(food.trim());
-    if (!selected) {
-      setMessage({
-        severity: "warn",
-        text: "Ingresa un alimento reconocido para verificar su categoría.",
-      });
-      return;
-    }
-    if (selected !== category) {
-      setMessage({
-        severity: "warn",
-        text: `“${food.trim()}” corresponde a ${categories[selected].name.toLocaleLowerCase("es")}. Selecciona esa categoría para continuar.`,
-      });
-      return;
-    }
-    if (
-      !Number.isFinite(temperature) ||
-      temperature < info.minValue ||
-      temperature > info.maxValue
-    ) {
-      setMessage({
-        severity: "warn",
-        text: `La temperatura debe estar entre ${info.min} y ${info.max} para ${info.name.toLocaleLowerCase("es")}.`,
-      });
-      return;
-    }
-
-    setMessage(null);
-    navigate("product");
-  };
-
   const handleCategoryChange = (nextCategory) => {
     setCategory(nextCategory);
     setTemperature(categories[nextCategory].temp);
     setMessage(null);
+  };
+
+  const adjustTemperature = (amount) => {
+    const nextTemperature = Math.min(
+      info.maxValue,
+      Math.max(info.minValue, Number((temperature + amount).toFixed(1))),
+    );
+    setTemperature(nextTemperature);
   };
 
   const handleRegister = async (event) => {
@@ -1131,7 +1209,7 @@ export default function App() {
                 <span>ALIMENTO</span>
                 <span>TEMPERATURA</span>
                 <span>RANGO TÉRMICO</span>
-                <span>FECHA REGISTRO</span>
+                <span>FECHA Y ORIGEN</span>
                 <span>ACCIÓN</span>
               </div>
 
@@ -1178,7 +1256,16 @@ export default function App() {
                       <span className={row.statusTone} />
                     </div>
                   </div>
-                  <div className="date-cell">{row.date}</div>
+                  <div className="date-cell">
+                    <span>{row.date}</span>
+                    <span
+                      className="food-origin"
+                      title={`País de origen: ${row.origin.name}`}
+                    >
+                      <span aria-hidden="true">{row.origin.flag}</span>
+                      {row.origin.name}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     className="table-arrow"
@@ -1246,7 +1333,7 @@ export default function App() {
                 )}
 
                 <form
-                  onSubmit={handleContinueToProduct}
+                  onSubmit={submitFood}
                   className="config-form"
                 >
                   <label className="field-block">
@@ -1298,12 +1385,30 @@ export default function App() {
                     </div>
                   </label>
 
-                  <label className="field-block">
+                  <div className="field-block">
                     <div className="field-row">
-                      <span className="field-label">Temperatura (°C) :</span>
+                      <label className="field-label" htmlFor="temperature-input">
+                        Temperatura (°C) :
+                      </label>
                       <div className="temp-badge-group">
-                        <span className="temp-badge negative">-0.5</span>
-                        <span className="temp-badge positive">+0.5</span>
+                        <button
+                          type="button"
+                          className="temp-badge negative"
+                          onClick={() => adjustTemperature(-0.5)}
+                          disabled={busy || temperature <= info.minValue}
+                          aria-label="Disminuir temperatura en 0.5 grados"
+                        >
+                          -0.5
+                        </button>
+                        <button
+                          type="button"
+                          className="temp-badge positive"
+                          onClick={() => adjustTemperature(0.5)}
+                          disabled={busy || temperature >= info.maxValue}
+                          aria-label="Aumentar temperatura en 0.5 grados"
+                        >
+                          +0.5
+                        </button>
                         <span className="temp-badge status">
                           Frescos Óptimo
                         </span>
@@ -1311,6 +1416,7 @@ export default function App() {
                     </div>
                     <div className="field-input-wrap compact-value">
                       <InputNumber
+                        inputId="temperature-input"
                         value={temperature}
                         onValueChange={(e) => {
                           if (e.value !== null) setTemperature(e.value);
@@ -1323,7 +1429,7 @@ export default function App() {
                       />
                       <span className="unit">°C</span>
                     </div>
-                  </label>
+                  </div>
 
                   <label className="field-block">
                     <div className="field-row">
@@ -1339,13 +1445,33 @@ export default function App() {
                     <div className="temperature-slider-wrap">
                       <Slider
                         value={temperature}
-                        onChange={(e) => setTemperature(e.value)}
+                        onChange={(e) => {
+                          const nextTemperature = e.value;
+                          const nearestDegree = Math.round(nextTemperature);
+                          const snappedTemperature =
+                            Math.abs(nextTemperature - nearestDegree) <= 0.15
+                              ? nearestDegree
+                              : Number(nextTemperature.toFixed(1));
+                          setTemperature(snappedTemperature);
+                        }}
                         disabled={busy}
                         min={info.minValue}
                         max={info.maxValue}
-                        step={1}
+                        step={0.1}
                       />
                     </div>
+                    <output
+                      className="slider-current-value"
+                      aria-live="polite"
+                    >
+                      Temperatura seleccionada:{" "}
+                      <strong>
+                        {Number.isInteger(temperature)
+                          ? temperature
+                          : temperature.toFixed(1)}
+                        °C
+                      </strong>
+                    </output>
                     <div className="slider-labels">
                       <span>{info.name}</span>
                       <span>{info.ideal}</span>
