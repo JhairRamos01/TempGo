@@ -615,6 +615,7 @@ export default function App() {
         severity: "success",
         text: `“${food}” se registró correctamente.`,
       });
+      navigate("product");
     } catch (error) {
       setMessage({
         severity: "warn",
