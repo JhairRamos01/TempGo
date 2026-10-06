@@ -1522,7 +1522,8 @@ export default function App() {
                   className="product-cta"
                   onClick={() => navigate("setup")}
                 >
-                  + INGRESAR OTRO ALIMENTO
+                  <i className="pi pi-pencil" aria-hidden="true" />
+                  MODIFICAR EL ALIMENTO
                 </button>
               </div>
 
@@ -1562,9 +1563,11 @@ export default function App() {
                     <div className="mini-panel registered-panel">
                       <div className="mini-label">ALIMENTO REGISTRADO</div>
                       <div className="registered-item">
-                        <div className="registered-icon">
-                          {productMeta[category].emoji}
-                        </div>
+                        <img
+                          className="registered-icon"
+                          src={info.image}
+                          alt={food || "Alimento registrado"}
+                        />
                         <div>
                           <strong>{food || "Producto"}</strong>
                           <small>{productMeta[category].label}</small>
@@ -1577,12 +1580,11 @@ export default function App() {
                 <div className="product-main-panel">
                   <div className="product-heading-row">
                     <div className="product-headline-wrap">
-                      <span
+                      <img
                         className="product-headline-icon"
-                        aria-hidden="true"
-                      >
-                        {productMeta[category].emoji}
-                      </span>
+                        src={info.image}
+                        alt={food || "Alimento"}
+                      />
                       <div>
                         <span className="product-kicker">
                           {productMeta[category].label}
@@ -1601,13 +1603,25 @@ export default function App() {
                     <div className="thermal-block">
                       <div className="thermal-header">
                         <span>CONTROL DE RANGO TÉRMICO</span>
-                        <span className="thermal-zone">Zona actual</span>
+                        <span className="thermal-zone">
+                          Zona actual · {temperature}°C
+                        </span>
                       </div>
 
                       <div className="thermal-bar">
                         <span
                           className="thermal-point"
-                          style={{ left: "55%" }}
+                          style={{
+                            left: `${Math.min(
+                              100,
+                              Math.max(
+                                0,
+                                ((temperature - info.minValue) /
+                                  (info.maxValue - info.minValue)) *
+                                  100,
+                              ),
+                            )}%`,
+                          }}
                         />
                       </div>
 
