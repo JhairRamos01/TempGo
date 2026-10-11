@@ -8,7 +8,7 @@ import { Calendar } from "primereact/calendar";
 import { Card } from "primereact/card";
 import { Message } from "primereact/message";
 
-const API_BASE = "https://api-tempgo.onrender.com/api";
+const API_BASE = "https://api-tempgo-1.onrender.com/api";
 
 const categories = {
   refrigerados: {
@@ -103,6 +103,7 @@ function categorize(food) {
 const routes = {
   "/": "login",
   "/login": "login",
+  "/recuperacion-constraseña": "passwordReset",
   "/registro": "register",
   "/registrarse": "register",
   "/alimentos": "food",
@@ -117,6 +118,11 @@ const screenMeta = {
     title: "Tu frío bajo control",
     subtitle:
       "Monitorea almacenamiento, temperatura y seguridad con una experiencia intuitiva.",
+  },
+  passwordReset: {
+    label: "Recuperación",
+    title: "Restablecer contraseña",
+    subtitle: "Elige una contraseña nueva para recuperar el acceso a tu cuenta.",
   },
   register: {
     label: "Registro",
@@ -153,8 +159,17 @@ const screenPaths = Object.fromEntries(
 
 const protectedScreens = new Set(["food", "setup", "product", "dashboard"]);
 
+function normalizePathname(pathname) {
+  try {
+    return decodeURI(pathname);
+  } catch (error) {
+    if (!(error instanceof URIError)) throw error;
+    return pathname;
+  }
+}
+
 function screenFromPath(pathname) {
-  return routes[pathname] || "login";
+  return routes[normalizePathname(pathname)] || routes[pathname] || "login";
 }
 
 function generateUserCode() {
@@ -366,6 +381,12 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
+  const [resetToken, setResetToken] = useState(
+    () => new URLSearchParams(window.location.search).get("token") || "",
+  );
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordResetComplete, setPasswordResetComplete] = useState(false);
   const [rememberUser, setRememberUser] = useState(
     () => Boolean(localStorage.getItem("tempgo_remembered_email")),
   );
@@ -401,6 +422,11 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       const requestedScreen = screenFromPath(window.location.pathname);
+      if (requestedScreen === "passwordReset") {
+        setResetToken(
+          new URLSearchParams(window.location.search).get("token") || "",
+        );
+      }
       if (protectedScreens.has(requestedScreen) && !isAuthenticated) {
         window.history.replaceState({}, "", screenPaths.login);
         setScreen("login");
@@ -410,8 +436,13 @@ export default function App() {
     };
     const currentPath = screenPaths[screen];
 
-    if (window.location.pathname !== currentPath) {
-      window.history.replaceState({}, "", currentPath);
+    const normalizedPath = normalizePathname(window.location.pathname);
+    if (normalizedPath !== currentPath) {
+      window.history.replaceState(
+        {},
+        "",
+        `${currentPath}${window.location.search}`,
+      );
     }
 
     window.addEventListener("popstate", handlePopState);
@@ -841,6 +872,70 @@ export default function App() {
     }
   };
 
+  const handlePasswordReset = async (event) => {
+    event.preventDefault();
+
+    if (!resetToken) {
+      setMessage({
+        severity: "error",
+        text: "El enlace de recuperación no es válido. Solicita uno nuevo.",
+      });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setMessage({
+        severity: "warn",
+        text: "La contraseña debe tener al menos 8 caracteres.",
+      });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setMessage({
+        severity: "warn",
+        text: "Las contraseñas no coinciden.",
+      });
+      return;
+    }
+
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: resetToken, password: newPassword }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          formatApiError(
+            response,
+            data,
+            "No se pudo cambiar la contraseña. Solicita un nuevo enlace.",
+          ),
+        );
+      }
+
+      setPasswordResetComplete(true);
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setMessage({
+        severity: "success",
+        text: "Tu contraseña se cambió correctamente. Ya puedes iniciar sesión.",
+      });
+    } catch (error) {
+      setMessage({
+        severity: "error",
+        text:
+          error.message ||
+          "No se pudo cambiar la contraseña. Solicita un nuevo enlace.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className={`app ${theme}`}>
       {busy && (
@@ -870,6 +965,7 @@ export default function App() {
       <header className="topbar">
         {screen !== "login" &&
           screen !== "register" &&
+          screen !== "passwordReset" &&
           screen !== "food" &&
           screen !== "setup" &&
           screen !== "product" && (
@@ -891,13 +987,16 @@ export default function App() {
         )}
         {screen !== "login" &&
           screen !== "register" &&
+          screen !== "passwordReset" &&
           screen !== "food" &&
           screen !== "setup" &&
           screen !== "product" && (
           <span className="device-code">COD: 9NL47</span>
         )}
 
-        {screen === "login" || screen === "register" ? (
+        {screen === "login" ||
+        screen === "register" ||
+        screen === "passwordReset" ? (
           <div className="brand-wrap login-header">
             <span className="brand-kicker access-pill">ACCESO</span>
             <div className="logo">
@@ -982,6 +1081,7 @@ export default function App() {
       <main className="container">
         {screen !== "login" &&
           screen !== "register" &&
+          screen !== "passwordReset" &&
           screen !== "food" &&
           screen !== "setup" &&
           screen !== "product" && (
@@ -994,7 +1094,7 @@ export default function App() {
             </div>
           )}
 
-        {screen === "login" && (
+        {(screen === "login" || screen === "passwordReset") && (
           <section className="login-shell">
             <div className="login-card">
               <div className="login-icon" aria-hidden="true">
@@ -1013,12 +1113,18 @@ export default function App() {
                 </svg>
               </div>
               <h2>
-                {isRecoveringPassword
+                {screen === "passwordReset"
+                  ? "Restablecer contraseña"
+                  : isRecoveringPassword
                   ? "Recuperar contraseña"
                   : "Iniciar Sesión"}
               </h2>
               <p>
-                {isRecoveringPassword
+                {screen === "passwordReset"
+                  ? resetToken
+                    ? "Ingresa y confirma tu nueva contraseña."
+                    : "El enlace está incompleto o venció. Solicita una nueva recuperación."
+                  : isRecoveringPassword
                   ? "Ingresa tu correo y te enviaremos instrucciones para recuperar el acceso."
                   : (
                     <>
@@ -1034,7 +1140,7 @@ export default function App() {
                 </div>
               )}
 
-              {!isRecoveringPassword && (
+              {screen === "login" && !isRecoveringPassword && (
                 <form onSubmit={handleLogin} className="login-form">
                   <label>
                     Correo Electrónico
@@ -1139,7 +1245,7 @@ export default function App() {
                 </form>
               )}
 
-              {isRecoveringPassword && (
+              {screen === "login" && isRecoveringPassword && (
                 <form onSubmit={handlePasswordRecovery} className="login-form">
                   <label>
                     Correo Electrónico
@@ -1178,6 +1284,70 @@ export default function App() {
                   </button>
                 </form>
               )}
+
+              {screen === "passwordReset" &&
+                !passwordResetComplete &&
+                resetToken && (
+                  <form onSubmit={handlePasswordReset} className="login-form">
+                    <label>
+                      Nueva contraseña
+                      <div className="input-shell password-shell">
+                        <i className="pi pi-lock" aria-hidden="true" />
+                        <Password
+                          value={newPassword}
+                          onChange={(event) =>
+                            setNewPassword(event.target.value)
+                          }
+                          feedback={false}
+                          toggleMask
+                          disabled={busy}
+                          placeholder="Mínimo 8 caracteres"
+                          autoComplete="new-password"
+                          required
+                        />
+                      </div>
+                    </label>
+                    <label>
+                      Confirmar contraseña
+                      <div className="input-shell password-shell">
+                        <i className="pi pi-lock" aria-hidden="true" />
+                        <Password
+                          value={confirmNewPassword}
+                          onChange={(event) =>
+                            setConfirmNewPassword(event.target.value)
+                          }
+                          feedback={false}
+                          toggleMask
+                          disabled={busy}
+                          placeholder="Repite la nueva contraseña"
+                          autoComplete="new-password"
+                          required
+                        />
+                      </div>
+                    </label>
+                    <Button
+                      type="submit"
+                      label={busy ? "GUARDANDO..." : "Cambiar contraseña"}
+                      className="full primary-btn"
+                      disabled={busy}
+                    />
+                  </form>
+                )}
+
+              {screen === "passwordReset" &&
+                (passwordResetComplete || !resetToken) && (
+                  <button
+                    type="button"
+                    className="register-link"
+                    onClick={() => {
+                      setMessage(null);
+                      setIsRecoveringPassword(false);
+                      navigate("login");
+                    }}
+                  >
+                    Volver a Iniciar Sesión
+                  </button>
+                )}
             </div>
           </section>
         )}
