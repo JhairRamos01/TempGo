@@ -8,7 +8,7 @@ import { Calendar } from "primereact/calendar";
 import { Card } from "primereact/card";
 import { Message } from "primereact/message";
 
-const API_BASE = "https://api-tempgo-2.onrender.com/api";
+const API_BASE = "https://api-tempgo-1.onrender.com/api";
 
 const categories = {
   refrigerados: {
