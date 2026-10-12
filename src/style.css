@@ -1160,7 +1160,7 @@ label {
 .food-table-header,
 .food-table-row {
   display: grid;
-  grid-template-columns: 0.7fr 2.2fr 1.2fr 1.4fr 1.2fr 0.5fr;
+  grid-template-columns: 0.7fr 2.2fr 1.2fr 1.4fr 1.2fr;
   align-items: center;
   gap: 0.8rem;
   padding: 0 1.2rem;
@@ -1306,19 +1306,6 @@ label {
   font-weight: 500;
 }
 
-.table-arrow {
-  border: 1px solid rgba(140, 159, 189, 0.24);
-  background: rgba(249, 252, 255, 0.8);
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: #3d6d8d;
-  margin-left: auto;
-  cursor: pointer;
-}
-
 .app.dark .food-title-wrap h1 {
   color: #edf6ff;
 }
@@ -1378,11 +1365,6 @@ label {
   color: #a9bfd3;
 }
 
-.app.dark .table-arrow {
-  border-color: rgba(152, 190, 221, 0.2);
-  background: rgba(22, 57, 81, 0.85);
-  color: #d6e7f6;
-}
 
 .temperature-panel {
   min-height: 100%;

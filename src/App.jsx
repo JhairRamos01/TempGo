@@ -8,7 +8,7 @@ import { Calendar } from "primereact/calendar";
 import { Card } from "primereact/card";
 import { Message } from "primereact/message";
 
-const API_BASE = "https://api-tempgo-1.onrender.com/api";
+const API_BASE = "https://api-tempgo-2.onrender.com/api";
 
 const categories = {
   refrigerados: {
@@ -245,13 +245,13 @@ function normalizeOrigin(countryValue, countryCodeValue) {
     ? String.fromCodePoint(
         ...Array.from(countryCode, (letter) => letter.charCodeAt(0) + 127397),
       )
-    : "🌍";
+    : "";
 
   return {
     name:
       typeof name === "string" && name.trim()
         ? name.trim()
-        : "Origen no informado",
+        : "",
     flag,
   };
 }
@@ -1557,7 +1557,6 @@ export default function App() {
                 <span>TEMPERATURA</span>
                 <span>RANGO TÉRMICO</span>
                 <span>FECHA Y ORIGEN</span>
-                <span>ACCIÓN</span>
               </div>
 
               {foodLoading && (
@@ -1605,21 +1604,18 @@ export default function App() {
                   </div>
                   <div className="date-cell">
                     <span>{row.date}</span>
-                    <span
-                      className="food-origin"
-                      title={`País de origen: ${row.origin.name}`}
-                    >
-                      <span aria-hidden="true">{row.origin.flag}</span>
-                      {row.origin.name}
-                    </span>
+                    {row.origin.name && (
+                      <span
+                        className="food-origin"
+                        title={`País de origen: ${row.origin.name}`}
+                      >
+                        {row.origin.flag && (
+                          <span aria-hidden="true">{row.origin.flag}</span>
+                        )}
+                        {row.origin.name}
+                      </span>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    className="table-arrow"
-                    aria-label={`Ver ${row.name}`}
-                  >
-                    <i className="pi pi-angle-right" />
-                  </button>
                 </div>
               ))}
             </div>
