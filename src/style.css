@@ -145,6 +145,137 @@ img {
   font-size: 2rem;
 }
 
+.food-success-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      rgba(21, 147, 220, 0.22),
+      transparent 40%
+    ),
+    rgba(4, 17, 29, 0.76);
+  backdrop-filter: blur(10px);
+  animation: food-success-in 4.5s ease both;
+  pointer-events: none;
+}
+
+.food-success-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  width: min(100%, 600px);
+  overflow: hidden;
+  padding: clamp(2rem, 6vw, 3.5rem) clamp(1.5rem, 5vw, 3rem) 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 30px;
+  background:
+    radial-gradient(
+      circle at 50% 0,
+      rgba(92, 201, 255, 0.16),
+      transparent 48%
+    ),
+    linear-gradient(145deg, #ffffff, #eff8ff);
+  color: #18334c;
+  box-shadow:
+    0 32px 100px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  text-align: center;
+  animation: food-success-card-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.food-success-icon {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  margin-bottom: 0.35rem;
+  border: 1px solid rgba(23, 173, 119, 0.18);
+  border-radius: 24px;
+  background: linear-gradient(145deg, #e4fff3, #c9f5e2);
+  color: #119465;
+  font-size: 2rem;
+  box-shadow:
+    0 12px 28px rgba(24, 173, 119, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.food-success-label {
+  color: #138b68;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.food-success-card strong {
+  max-width: 100%;
+  font-size: clamp(1.35rem, 3.8vw, 2rem);
+  line-height: 1.3;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+
+.food-success-detail {
+  max-width: 390px;
+  color: #647b91;
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.food-success-progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: rgba(20, 135, 203, 0.1);
+}
+
+.food-success-progress::after {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #19c18a, #20a6f2);
+  content: "";
+  transform-origin: left;
+  animation: food-success-progress 4.5s linear both;
+}
+
+@keyframes food-success-in {
+  0%,
+  5%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes food-success-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes food-success-progress {
+  to {
+    transform: scaleX(0);
+  }
+}
+
 @keyframes success-overlay-in {
   from {
     opacity: 0;

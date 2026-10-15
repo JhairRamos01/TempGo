@@ -388,6 +388,7 @@ export default function App() {
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [foodSuccessMessage, setFoodSuccessMessage] = useState("");
   const [userName, setUserName] = useState(
     () => localStorage.getItem("tempgo_user_name") || "",
   );
@@ -499,6 +500,16 @@ export default function App() {
     );
     return () => window.clearTimeout(timeoutId);
   }, [showSuccessOverlay]);
+
+  useEffect(() => {
+    if (!foodSuccessMessage) return undefined;
+
+    const timeoutId = window.setTimeout(
+      () => setFoodSuccessMessage(""),
+      4500,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [foodSuccessMessage]);
 
   const navigate = (nextScreen) => {
     const nextPath = screenPaths[nextScreen];
@@ -650,10 +661,9 @@ export default function App() {
         );
       }
 
-      setMessage({
-        severity: "success",
-        text: `“${food}” se registró correctamente.`,
-      });
+      setFoodSuccessMessage(
+        `El alimento “${food.trim()}” se ingresó correctamente.`,
+      );
       navigate("product");
     } catch (error) {
       setMessage({
@@ -829,6 +839,25 @@ export default function App() {
               <i className="pi pi-check" />
             </span>
             <strong>Inicio de sesión correcto.</strong>
+          </div>
+        </div>
+      )}
+      {screen === "product" && foodSuccessMessage && (
+        <div
+          className="food-success-overlay"
+          role="status"
+          aria-live="assertive"
+        >
+          <div className="food-success-card">
+            <span className="food-success-icon" aria-hidden="true">
+              <i className="pi pi-check" />
+            </span>
+            <span className="food-success-label">Registro completado</span>
+            <strong>{foodSuccessMessage}</strong>
+            <span className="food-success-detail">
+              Ya puedes consultar sus detalles y condiciones de conservación.
+            </span>
+            <span className="food-success-progress" aria-hidden="true" />
           </div>
         </div>
       )}
