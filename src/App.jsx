@@ -12,7 +12,7 @@ const API_BASE = "https://api-tempgo-1.onrender.com/api";
 
 const categories = {
   refrigerados: {
-    name: "PRODUCTOS REFRIGERADOS",
+    name: "Productos refrigerados",
     ideal: "0°C - 4°C",
     min: "0°C",
     max: "4°C",
@@ -22,12 +22,17 @@ const categories = {
     idealLegend: "0 → 4°C",
     high: "4°C",
     temp: 3,
-    food: "Atún",
+    food: "Salmón",
+    suggestions: ["Salmón", "Atún", "Queso"],
     image: "/img/imagen1.jpeg",
     endpoint: "refrigerados",
+    apiRange: "0°C a 4°C",
+    summary: "Cadena de frío estable y control de frescura",
+    status: "Refrigerado",
+    statusTone: "good",
   },
   congelados: {
-    name: "PRODUCTOS CONGELADOS",
+    name: "Productos congelados",
     ideal: "-22°C - -18°C",
     min: "-22°C",
     max: "-18°C",
@@ -37,12 +42,17 @@ const categories = {
     idealLegend: "-22 → -18°C",
     high: "-18°C",
     temp: -19,
-    food: "Pollo",
+    food: "Pollo Congelado",
+    suggestions: ["Pollo Congelado", "Carne Congelada", "Helado"],
     image: "/img/imagen2.jpeg",
     endpoint: "congelados",
+    apiRange: "-22°C a -18°C",
+    summary: "Congelación controlada con margen térmico seguro",
+    status: "Congelado",
+    statusTone: "cool",
   },
   frutas: {
-    name: "FRUTAS Y VERDURAS",
+    name: "Frutas y verduras",
     ideal: "8°C - 12°C",
     min: "8°C",
     max: "12°C",
@@ -52,17 +62,45 @@ const categories = {
     idealLegend: "8 → 12°C",
     high: "12°C",
     temp: 9,
-    food: "Fresa",
+    food: "Manzana",
+    suggestions: ["Manzana", "Fresa", "Plátano"],
     image: "/img/imagen3.jpeg",
     endpoint: "verduras",
+    apiRange: "8°C a 12°C",
+    summary: "Cuidado de textura, humedad y conservación fresca",
+    status: "Fresco",
+    statusTone: "fresh",
   },
 };
 
-const apiRanges = {
-  congelados: "-22°C a -18°C",
-  refrigerados: "0°C a 4°C",
-  frutas: "8°C a 12°C",
-};
+let foodRowsCache = null;
+let foodRowsRequest = null;
+let foodRowsCacheVersion = 0;
+
+function hasStoredSession() {
+  return (
+    localStorage.getItem("tempgo_authenticated") === "true" ||
+    Boolean(localStorage.getItem("tempgo_token"))
+  );
+}
+
+function formatDateForApi(value) {
+  if (!value) return new Date().toLocaleDateString("es-ES");
+  const date = new Date(value);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${date.getFullYear()}`;
+}
+
+function formatApiError(response, data, fallback) {
+  const statusText = response?.status
+    ? `HTTP ${response.status}`
+    : "HTTP desconocido";
+  const backendMessage = data && (data.message || data.error || data.detail);
+  return backendMessage
+    ? `${statusText}: ${backendMessage}`
+    : `${statusText}. ${fallback}`;
+}
 
 function categorize(food) {
   const tokens = food
@@ -271,17 +309,6 @@ function normalizeFoodRecords(payload, categoryKey) {
   }
 
   const category = categories[categoryKey];
-  const toneByCategory = {
-    refrigerados: "good",
-    congelados: "cool",
-    frutas: "fresh",
-  };
-  const statusByCategory = {
-    refrigerados: "Refrigerado",
-    congelados: "Congelado",
-    frutas: "Fresco",
-  };
-
   return records.map((record, index) => {
     if (!record || typeof record !== "object" || Array.isArray(record)) {
       throw new Error("La API devolvió un registro de alimento inválido.");
@@ -344,8 +371,8 @@ function normalizeFoodRecords(payload, categoryKey) {
           : /°|c$/i.test(String(temperature))
             ? String(temperature)
             : `${temperature}°C`,
-      status: statusByCategory[categoryKey],
-      statusTone: toneByCategory[categoryKey],
+      status: category.status,
+      statusTone: category.statusTone,
       range: range === undefined || range === null ? "—" : String(range),
       date: formatRegistrationDate(date),
       origin,
@@ -354,18 +381,73 @@ function normalizeFoodRecords(payload, categoryKey) {
   });
 }
 
-export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () =>
-      localStorage.getItem("tempgo_authenticated") === "true" ||
-      Boolean(localStorage.getItem("tempgo_token")),
+function invalidateFoodRowsCache() {
+  foodRowsCacheVersion += 1;
+  foodRowsCache = null;
+  foodRowsRequest = null;
+}
+
+function loadFoodRows() {
+  if (foodRowsCache) return Promise.resolve(foodRowsCache);
+  if (foodRowsRequest) return foodRowsRequest;
+
+  const requestVersion = foodRowsCacheVersion;
+  const requests = Object.entries(categories).map(
+    async ([categoryKey, category]) => {
+      const response = await fetch(`${API_BASE}/${category.endpoint}`);
+      const data = await response.json().catch(() => {
+        throw new Error(
+          `La API de ${category.name.toLocaleLowerCase("es")} devolvió una respuesta inválida (HTTP ${response.status}).`,
+        );
+      });
+
+      if (!response.ok) {
+        const detail = data && (data.message || data.error || data.detail);
+        throw new Error(
+          `No se pudo cargar ${category.name.toLocaleLowerCase("es")} (HTTP ${response.status})${detail ? `: ${detail}` : "."}`,
+        );
+      }
+
+      return normalizeFoodRecords(data, categoryKey);
+    },
   );
+
+  foodRowsRequest = Promise.allSettled(requests)
+    .then((results) => {
+      const rows = [];
+      const errors = [];
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          rows.push(...result.value);
+        } else {
+          errors.push(
+            result.reason instanceof Error
+              ? result.reason.message
+              : "Error desconocido al cargar alimentos.",
+          );
+        }
+      });
+
+      const result = { rows, errors };
+      if (!errors.length && requestVersion === foodRowsCacheVersion) {
+        foodRowsCache = result;
+      }
+      return result;
+    })
+    .finally(() => {
+      if (requestVersion === foodRowsCacheVersion) {
+        foodRowsRequest = null;
+      }
+    });
+
+  return foodRowsRequest;
+}
+
+export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(hasStoredSession);
   const [screen, setScreen] = useState(() => {
     const requestedScreen = screenFromPath(window.location.pathname);
-    const hasStoredSession =
-      localStorage.getItem("tempgo_authenticated") === "true" ||
-      Boolean(localStorage.getItem("tempgo_token"));
-    return protectedScreens.has(requestedScreen) && !hasStoredSession
+    return protectedScreens.has(requestedScreen) && !hasStoredSession()
       ? "login"
       : requestedScreen;
   });
@@ -380,7 +462,7 @@ export default function App() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [food, setFood] = useState("Fresa");
+  const [food, setFood] = useState(categories.frutas.food);
   const [temperature, setTemperature] = useState(10);
   const [date, setDate] = useState(new Date());
   const [category, setCategory] = useState("frutas");
@@ -438,57 +520,33 @@ export default function App() {
   useEffect(() => {
     if (screen !== "food") return undefined;
 
-    const controller = new AbortController();
-    setFoodLoading(true);
-    setFoodLoadError("");
+    let active = true;
+    const hasCachedRows = Boolean(foodRowsCache);
+    setFoodLoading(!hasCachedRows);
+    if (!hasCachedRows) setFoodLoadError("");
 
-    const requests = Object.entries(categories).map(
-      async ([categoryKey, category]) => {
-        const response = await fetch(
-          `${API_BASE}/${category.endpoint}`,
-          { signal: controller.signal },
+    loadFoodRows()
+      .then(({ rows, errors }) => {
+        if (!active) return;
+        if (!errors.length) foodRowsCache = { rows, errors };
+        setFoodRows(rows);
+        setFoodLoadError(errors.join(" "));
+      })
+      .catch((error) => {
+        if (!active) return;
+        setFoodLoadError(
+          error instanceof Error
+            ? error.message
+            : "Error desconocido al cargar alimentos.",
         );
-        const data = await response.json().catch(() => {
-          throw new Error(
-            `La API de ${category.name.toLocaleLowerCase("es")} devolvió una respuesta inválida (HTTP ${response.status}).`,
-          );
-        });
-
-        if (!response.ok) {
-          const detail =
-            data && (data.message || data.error || data.detail);
-          throw new Error(
-            `No se pudo cargar ${category.name.toLocaleLowerCase("es")} (HTTP ${response.status})${detail ? `: ${detail}` : "."}`,
-          );
-        }
-
-        return normalizeFoodRecords(data, categoryKey);
-      },
-    );
-
-    Promise.allSettled(requests).then((results) => {
-      if (controller.signal.aborted) return;
-
-      const rows = [];
-      const errors = [];
-      results.forEach((result) => {
-        if (result.status === "fulfilled") {
-          rows.push(...result.value);
-        } else if (result.reason?.name !== "AbortError") {
-          errors.push(
-            result.reason instanceof Error
-              ? result.reason.message
-              : "Error desconocido al cargar alimentos.",
-          );
-        }
+      })
+      .finally(() => {
+        if (active) setFoodLoading(false);
       });
 
-      setFoodRows(rows);
-      setFoodLoadError(errors.join(" "));
-      setFoodLoading(false);
-    });
-
-    return () => controller.abort();
+    return () => {
+      active = false;
+    };
   }, [screen]);
 
   useEffect(() => {
@@ -549,58 +607,18 @@ export default function App() {
   };
 
   const info = categories[category];
-  const productMeta = {
-    refrigerados: {
-      label: "Productos refrigerados",
-      accent: "refrigerados",
-      emoji: "🧊",
-      summary: "Cadena de frío estable y control de frescura",
-    },
-    congelados: {
-      label: "Productos congelados",
-      accent: "congelados",
-      emoji: "❄️",
-      summary: "Congelación controlada con margen térmico seguro",
-    },
-    frutas: {
-      label: "Frutas y verduras",
-      accent: "frutas",
-      emoji: "🍏",
-      summary: "Cuidado de textura, humedad y conservación fresca",
-    },
-  };
+  const searchQuery = foodSearch.trim().toLocaleLowerCase("es");
 
   const filteredFoodRows = foodRows.filter((row) => {
     const matchesCategory =
       foodFilter === "todos" || row.chip === foodFilter;
-    const query = foodSearch.trim().toLocaleLowerCase("es");
     const matchesSearch =
-      !query ||
+      !searchQuery ||
       `${row.id} ${row.name} ${row.subtitle}`
         .toLocaleLowerCase("es")
-        .includes(query);
+        .includes(searchQuery);
     return matchesCategory && matchesSearch;
   });
-
-  const formatDateForApi = (value) => {
-    if (!value) return new Date().toLocaleDateString("es-ES");
-    const d = new Date(value);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
-  const formatApiError = (response, data, fallback) => {
-    const statusText =
-      response && response.status
-        ? `HTTP ${response.status}`
-        : "HTTP desconocido";
-    const backendMessage = data && (data.message || data.error || data.detail);
-    return backendMessage
-      ? `${statusText}: ${backendMessage}`
-      : `${statusText}. ${fallback}`;
-  };
 
   const submitFood = async (event) => {
     event.preventDefault();
@@ -643,7 +661,7 @@ export default function App() {
           body: JSON.stringify({
             alimento_especifico: food.trim(),
             temperatura: Number(temperature),
-            rango: apiRanges[category],
+            rango: categories[category].apiRange,
             fecha_creacion: formatDateForApi(date),
           }),
         },
@@ -661,6 +679,7 @@ export default function App() {
         );
       }
 
+      invalidateFoodRowsCache();
       setFoodSuccessMessage(
         `El alimento “${food.trim()}” se ingresó correctamente.`,
       );
@@ -676,6 +695,9 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    invalidateFoodRowsCache();
+    setFoodRows([]);
+    setFoodLoadError("");
     localStorage.removeItem("tempgo_token");
     localStorage.removeItem("tempgo_authenticated");
     localStorage.removeItem("tempgo_user_name");
@@ -697,6 +719,7 @@ export default function App() {
   const handleCategoryChange = (nextCategory) => {
     setCategory(nextCategory);
     setTemperature(categories[nextCategory].temp);
+    setFood(categories[nextCategory].food);
     setMessage(null);
   };
 
@@ -1232,7 +1255,7 @@ export default function App() {
             <div className="food-header-row">
               <div className="food-title-wrap">
                 <span className="food-header-icon" aria-hidden="true">
-                  <i className="pi pi-clipboard" />
+                  <i className="pi pi-list" />
                 </span>
                 <div className="food-heading-copy">
                   <span className="food-kicker">Control de inventario</span>
@@ -1392,9 +1415,8 @@ export default function App() {
 
             <div className="config-layout">
               <aside className="range-panel">
-                <div className="panel-title-with-icon">
-                  <i className="pi pi-thermometer" aria-hidden="true" />
-                  <span>Rangos de Temperatura :</span>
+                <div className="range-panel-header">
+                  <h2 className="new-record">Rangos de Temperatura</h2>
                 </div>
 
                 <div className="range-list">
@@ -1402,7 +1424,8 @@ export default function App() {
                     <button
                       key={key}
                       type="button"
-                      className={`range-option ${category === key ? "selected" : ""}`}
+                      className={`range-option range-option-${key} ${category === key ? "selected" : ""}`}
+                      aria-pressed={category === key}
                       onClick={() => handleCategoryChange(key)}
                     >
                       <span className={`range-dot ${key}`} aria-hidden="true" />
@@ -1410,6 +1433,7 @@ export default function App() {
                         <strong>{item.ideal}</strong>
                         <small>{item.name}</small>
                       </div>
+                      <i className="pi pi-check range-selected-icon" aria-hidden="true" />
                     </button>
                   ))}
                 </div>
@@ -1418,10 +1442,7 @@ export default function App() {
 
               <div className="config-form-panel">
                 <div className="config-form-header">
-                  <div className="panel-title-with-icon">
-                    <span>Ingresar alimento :</span>
-                  </div>
-                  <span className="new-record">Nuevo Registro</span>
+                  <h2 className="new-record">Nuevo Registro</h2>
                 </div>
 
                 {message && (
@@ -1436,38 +1457,6 @@ export default function App() {
                 >
                   <label className="field-block">
                     <span className="field-label">Alimento Específico :</span>
-                    <div className="chip-suggestions">
-                      <button
-                        type="button"
-                        className="suggestion-chip"
-                        onClick={() => {
-                          setFood("Salmón");
-                          setMessage(null);
-                        }}
-                      >
-                        Salmón
-                      </button>
-                      <button
-                        type="button"
-                        className="suggestion-chip"
-                        onClick={() => {
-                          setFood("Manzana");
-                          setMessage(null);
-                        }}
-                      >
-                        Manzana
-                      </button>
-                      <button
-                        type="button"
-                        className="suggestion-chip"
-                        onClick={() => {
-                          setFood("Pollo Congelado");
-                          setMessage(null);
-                        }}
-                      >
-                        Pollo Congelado
-                      </button>
-                    </div>
                     <div className="field-input-wrap with-icon">
                       <InputText
                         value={food}
@@ -1476,7 +1465,8 @@ export default function App() {
                           setMessage(null);
                         }}
                         disabled={busy}
-                        placeholder="Ej. Salmón fresco, manzana, pollo..."
+                        placeholder={`Ej. ${info.suggestions.join(", ")}...`}
+                        autoComplete="off"
                         required
                       />
                       <i className="pi pi-search" aria-hidden="true" />
@@ -1534,11 +1524,6 @@ export default function App() {
                       <span className="field-label">
                         Rango de Temperatura :
                       </span>
-                      <div className="range-values">
-                        <span>{info.min}</span>
-                        <span>{info.idealLegend}</span>
-                        <span>{info.max}</span>
-                      </div>
                     </div>
                     <div className="temperature-slider-wrap">
                       <Slider
@@ -1558,6 +1543,10 @@ export default function App() {
                         step={0.1}
                       />
                     </div>
+                    <div className="range-values">
+                      <span>Mínima: {info.min}</span>
+                      <span>Máxima: {info.max}</span>
+                    </div>
                     <output
                       className="slider-current-value"
                       aria-live="polite"
@@ -1570,11 +1559,6 @@ export default function App() {
                         °C
                       </strong>
                     </output>
-                    <div className="slider-labels">
-                      <span>{info.name}</span>
-                      <span>{info.ideal}</span>
-                      <span>Temperatura permitida</span>
-                    </div>
                   </label>
 
                   <label className="field-block">
@@ -1612,7 +1596,7 @@ export default function App() {
             <div className="product-shell">
               <div className="product-topbar-row">
                 <div className="product-module-tag">
-                  {productMeta[category].label}
+                  {info.name}
                 </div>
                 <button
                   type="button"
@@ -1667,7 +1651,7 @@ export default function App() {
                         />
                         <div>
                           <strong>{food || "Producto"}</strong>
-                          <small>{productMeta[category].label}</small>
+                          <small>{info.name}</small>
                         </div>
                       </div>
                     </div>
@@ -1684,7 +1668,7 @@ export default function App() {
                       />
                       <div>
                         <span className="product-kicker">
-                          {productMeta[category].label}
+                          {info.name}
                         </span>
                         <h1>{food || "Producto"}</h1>
                       </div>
@@ -1694,7 +1678,7 @@ export default function App() {
 
                   <div className="product-detail-body">
                     <div className="product-detail-copy">
-                      <p>{productMeta[category].summary}</p>
+                      <p>{info.summary}</p>
                     </div>
 
                     <div className="thermal-block">
