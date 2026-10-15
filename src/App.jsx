@@ -103,7 +103,6 @@ function categorize(food) {
 const routes = {
   "/": "login",
   "/login": "login",
-  "/recuperacion-constraseña": "passwordReset",
   "/registro": "register",
   "/registrarse": "register",
   "/alimentos": "food",
@@ -118,11 +117,6 @@ const screenMeta = {
     title: "Tu frío bajo control",
     subtitle:
       "Monitorea almacenamiento, temperatura y seguridad con una experiencia intuitiva.",
-  },
-  passwordReset: {
-    label: "Recuperación",
-    title: "Restablecer contraseña",
-    subtitle: "Elige una contraseña nueva para recuperar el acceso a tu cuenta.",
   },
   register: {
     label: "Registro",
@@ -379,14 +373,6 @@ export default function App() {
     () => localStorage.getItem("tempgo_remembered_email") || "",
   );
   const [password, setPassword] = useState("");
-  const [recoveryEmail, setRecoveryEmail] = useState("");
-  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
-  const [resetToken, setResetToken] = useState(
-    () => new URLSearchParams(window.location.search).get("token") || "",
-  );
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [passwordResetComplete, setPasswordResetComplete] = useState(false);
   const [rememberUser, setRememberUser] = useState(
     () => Boolean(localStorage.getItem("tempgo_remembered_email")),
   );
@@ -422,11 +408,6 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       const requestedScreen = screenFromPath(window.location.pathname);
-      if (requestedScreen === "passwordReset") {
-        setResetToken(
-          new URLSearchParams(window.location.search).get("token") || "",
-        );
-      }
       if (protectedScreens.has(requestedScreen) && !isAuthenticated) {
         window.history.replaceState({}, "", screenPaths.login);
         setScreen("login");
@@ -825,117 +806,6 @@ export default function App() {
     }
   };
 
-  const handlePasswordRecovery = async (event) => {
-    event.preventDefault();
-
-    if (!recoveryEmail.trim()) {
-      setMessage({
-        severity: "warn",
-        text: "Ingresa el correo asociado a tu cuenta.",
-      });
-      return;
-    }
-
-    setBusy(true);
-    setMessage(null);
-    try {
-      const response = await fetch(`${API_BASE}/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: recoveryEmail.trim() }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(
-          formatApiError(
-            response,
-            data,
-            "No se pudo solicitar la recuperación de contraseña.",
-          ),
-        );
-      }
-
-      setMessage({
-        severity: "success",
-        text: "Si el correo está asociado a una cuenta, recibirás instrucciones para recuperar tu contraseña.",
-      });
-    } catch (error) {
-      setMessage({
-        severity: "error",
-        text:
-          error.message ||
-          "No se pudo solicitar la recuperación de contraseña.",
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handlePasswordReset = async (event) => {
-    event.preventDefault();
-
-    if (!resetToken) {
-      setMessage({
-        severity: "error",
-        text: "El enlace de recuperación no es válido. Solicita uno nuevo.",
-      });
-      return;
-    }
-    if (newPassword.length < 8) {
-      setMessage({
-        severity: "warn",
-        text: "La contraseña debe tener al menos 8 caracteres.",
-      });
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      setMessage({
-        severity: "warn",
-        text: "Las contraseñas no coinciden.",
-      });
-      return;
-    }
-
-    setBusy(true);
-    setMessage(null);
-    try {
-      const response = await fetch(`${API_BASE}/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: resetToken, password: newPassword }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(
-          formatApiError(
-            response,
-            data,
-            "No se pudo cambiar la contraseña. Solicita un nuevo enlace.",
-          ),
-        );
-      }
-
-      setPasswordResetComplete(true);
-      setNewPassword("");
-      setConfirmNewPassword("");
-      setMessage({
-        severity: "success",
-        text: "Tu contraseña se cambió correctamente. Ya puedes iniciar sesión.",
-      });
-    } catch (error) {
-      setMessage({
-        severity: "error",
-        text:
-          error.message ||
-          "No se pudo cambiar la contraseña. Solicita un nuevo enlace.",
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div className={`app ${theme}`}>
       {busy && (
@@ -965,7 +835,6 @@ export default function App() {
       <header className="topbar">
         {screen !== "login" &&
           screen !== "register" &&
-          screen !== "passwordReset" &&
           screen !== "food" &&
           screen !== "setup" &&
           screen !== "product" && (
@@ -987,16 +856,13 @@ export default function App() {
         )}
         {screen !== "login" &&
           screen !== "register" &&
-          screen !== "passwordReset" &&
           screen !== "food" &&
           screen !== "setup" &&
           screen !== "product" && (
           <span className="device-code">COD: 9NL47</span>
         )}
 
-        {screen === "login" ||
-        screen === "register" ||
-        screen === "passwordReset" ? (
+        {screen === "login" || screen === "register" ? (
           <div className="brand-wrap login-header">
             <span className="brand-kicker access-pill">ACCESO</span>
             <div className="logo">
@@ -1081,7 +947,6 @@ export default function App() {
       <main className="container">
         {screen !== "login" &&
           screen !== "register" &&
-          screen !== "passwordReset" &&
           screen !== "food" &&
           screen !== "setup" &&
           screen !== "product" && (
@@ -1094,7 +959,7 @@ export default function App() {
             </div>
           )}
 
-        {(screen === "login" || screen === "passwordReset") && (
+        {screen === "login" && (
           <section className="login-shell">
             <div className="login-card">
               <div className="login-icon" aria-hidden="true">
@@ -1112,26 +977,10 @@ export default function App() {
                   <path d="M12 18v-6" />
                 </svg>
               </div>
-              <h2>
-                {screen === "passwordReset"
-                  ? "Restablecer contraseña"
-                  : isRecoveringPassword
-                  ? "Recuperar contraseña"
-                  : "Iniciar Sesión"}
-              </h2>
+              <h2>Iniciar Sesión</h2>
               <p>
-                {screen === "passwordReset"
-                  ? resetToken
-                    ? "Ingresa y confirma tu nueva contraseña."
-                    : "El enlace está incompleto o venció. Solicita una nueva recuperación."
-                  : isRecoveringPassword
-                  ? "Ingresa tu correo y te enviaremos instrucciones para recuperar el acceso."
-                  : (
-                    <>
-                      Ingresa a la plataforma de monitoreo y control térmico
-                      <strong> TempGo</strong>
-                    </>
-                  )}
+                Ingresa a la plataforma de monitoreo y control térmico
+                <strong> TempGo</strong>
               </p>
 
               {message && (
@@ -1140,214 +989,94 @@ export default function App() {
                 </div>
               )}
 
-              {screen === "login" && !isRecoveringPassword && (
-                <form onSubmit={handleLogin} className="login-form">
-                  <label>
-                    Correo Electrónico
-                    <div className="input-shell">
-                      <i className="pi pi-envelope" aria-hidden="true" />
-                      <InputText
-                        type="email"
-                        value={email}
-                        onChange={(event) => {
-                          const nextEmail = event.target.value;
-                          setEmail(nextEmail);
-                          if (rememberUser) {
-                            if (nextEmail.trim()) {
-                              localStorage.setItem(
-                                "tempgo_remembered_email",
-                                nextEmail.trim(),
-                              );
-                            } else {
-                              localStorage.removeItem(
-                                "tempgo_remembered_email",
-                              );
-                            }
-                          }
-                        }}
-                        disabled={busy}
-                        placeholder="ejemplo@empresa.com"
-                        required
-                      />
-                    </div>
-                  </label>
-
-                  <label>
-                    Contraseña
-                    <div className="input-shell password-shell">
-                      <i className="pi pi-lock" aria-hidden="true" />
-                      <Password
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        feedback={false}
-                        toggleMask
-                        disabled={busy}
-                        placeholder="••••••••"
-                        required
-                      />
-                    </div>
-                  </label>
-
-                  <div className="login-options">
-                    <label className="remember-box">
-                      <input
-                        type="checkbox"
-                        checked={rememberUser}
-                        disabled={busy}
-                        onChange={(event) => {
-                          const shouldRemember = event.target.checked;
-                          setRememberUser(shouldRemember);
-                          if (shouldRemember && email.trim()) {
+              <form onSubmit={handleLogin} className="login-form">
+                <label>
+                  Correo Electrónico
+                  <div className="input-shell">
+                    <i className="pi pi-envelope" aria-hidden="true" />
+                    <InputText
+                      type="email"
+                      value={email}
+                      onChange={(event) => {
+                        const nextEmail = event.target.value;
+                        setEmail(nextEmail);
+                        if (rememberUser) {
+                          if (nextEmail.trim()) {
                             localStorage.setItem(
                               "tempgo_remembered_email",
-                              email.trim(),
+                              nextEmail.trim(),
                             );
-                          } else if (shouldRemember) {
-                            localStorage.removeItem("tempgo_remembered_email");
-                          } else if (!shouldRemember) {
+                          } else {
                             localStorage.removeItem("tempgo_remembered_email");
                           }
-                        }}
-                      />
-                      <span>Recordar usuario</span>
-                    </label>
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={() => {
-                        setRecoveryEmail(email.trim());
-                        setMessage(null);
-                        setIsRecoveringPassword(true);
+                        }
                       }}
                       disabled={busy}
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </button>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    label={busy ? "CARGANDO..." : "Ingresar →"}
-                    className="full primary-btn"
-                    disabled={busy}
-                  />
-
-                  <div className="divider">ASEGURAMIENTO DE CALIDAD</div>
-
-                  <button
-                    type="button"
-                    className="register-link"
-                    onClick={() => navigate("register")}
-                    disabled={busy}
-                  >
-                    ¿Aún no tienes cuenta? <span>Regístrate →</span>
-                  </button>
-                </form>
-              )}
-
-              {screen === "login" && isRecoveringPassword && (
-                <form onSubmit={handlePasswordRecovery} className="login-form">
-                  <label>
-                    Correo Electrónico
-                    <div className="input-shell">
-                      <i className="pi pi-envelope" aria-hidden="true" />
-                      <InputText
-                        type="email"
-                        value={recoveryEmail}
-                        onChange={(event) =>
-                          setRecoveryEmail(event.target.value)
-                        }
-                        disabled={busy}
-                        placeholder="ejemplo@empresa.com"
-                        autoComplete="email"
-                        required
-                      />
-                    </div>
-                  </label>
-
-                  <Button
-                    type="submit"
-                    label={busy ? "ENVIANDO..." : "Enviar instrucciones"}
-                    className="full primary-btn"
-                    disabled={busy}
-                  />
-                  <button
-                    type="button"
-                    className="register-link"
-                    onClick={() => {
-                      setMessage(null);
-                      setIsRecoveringPassword(false);
-                    }}
-                    disabled={busy}
-                  >
-                    Volver a Iniciar Sesión
-                  </button>
-                </form>
-              )}
-
-              {screen === "passwordReset" &&
-                !passwordResetComplete &&
-                resetToken && (
-                  <form onSubmit={handlePasswordReset} className="login-form">
-                    <label>
-                      Nueva contraseña
-                      <div className="input-shell password-shell">
-                        <i className="pi pi-lock" aria-hidden="true" />
-                        <Password
-                          value={newPassword}
-                          onChange={(event) =>
-                            setNewPassword(event.target.value)
-                          }
-                          feedback={false}
-                          toggleMask
-                          disabled={busy}
-                          placeholder="Mínimo 8 caracteres"
-                          autoComplete="new-password"
-                          required
-                        />
-                      </div>
-                    </label>
-                    <label>
-                      Confirmar contraseña
-                      <div className="input-shell password-shell">
-                        <i className="pi pi-lock" aria-hidden="true" />
-                        <Password
-                          value={confirmNewPassword}
-                          onChange={(event) =>
-                            setConfirmNewPassword(event.target.value)
-                          }
-                          feedback={false}
-                          toggleMask
-                          disabled={busy}
-                          placeholder="Repite la nueva contraseña"
-                          autoComplete="new-password"
-                          required
-                        />
-                      </div>
-                    </label>
-                    <Button
-                      type="submit"
-                      label={busy ? "GUARDANDO..." : "Cambiar contraseña"}
-                      className="full primary-btn"
-                      disabled={busy}
+                      placeholder="ejemplo@empresa.com"
+                      required
                     />
-                  </form>
-                )}
+                  </div>
+                </label>
 
-              {screen === "passwordReset" &&
-                (passwordResetComplete || !resetToken) && (
-                  <button
-                    type="button"
-                    className="register-link"
-                    onClick={() => {
-                      setMessage(null);
-                      setIsRecoveringPassword(false);
-                      navigate("login");
-                    }}
-                  >
-                    Volver a Iniciar Sesión
-                  </button>
-                )}
+                <label>
+                  Contraseña
+                  <div className="input-shell password-shell">
+                    <i className="pi pi-lock" aria-hidden="true" />
+                    <Password
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      feedback={false}
+                      toggleMask
+                      disabled={busy}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                </label>
+
+                <div className="login-options">
+                  <label className="remember-box">
+                    <input
+                      type="checkbox"
+                      checked={rememberUser}
+                      disabled={busy}
+                      onChange={(event) => {
+                        const shouldRemember = event.target.checked;
+                        setRememberUser(shouldRemember);
+                        if (shouldRemember && email.trim()) {
+                          localStorage.setItem(
+                            "tempgo_remembered_email",
+                            email.trim(),
+                          );
+                        } else if (shouldRemember) {
+                          localStorage.removeItem("tempgo_remembered_email");
+                        } else if (!shouldRemember) {
+                          localStorage.removeItem("tempgo_remembered_email");
+                        }
+                      }}
+                    />
+                    <span>Recordar usuario</span>
+                  </label>
+                </div>
+
+                <Button
+                  type="submit"
+                  label={busy ? "CARGANDO..." : "Ingresar →"}
+                  className="full primary-btn"
+                  disabled={busy}
+                />
+
+                <div className="divider">ASEGURAMIENTO DE CALIDAD</div>
+
+                <button
+                  type="button"
+                  className="register-link"
+                  onClick={() => navigate("register")}
+                  disabled={busy}
+                >
+                  ¿Aún no tienes cuenta? <span>Regístrate →</span>
+                </button>
+              </form>
             </div>
           </section>
         )}
@@ -1476,13 +1205,17 @@ export default function App() {
                 <span className="food-header-icon" aria-hidden="true">
                   <i className="pi pi-clipboard" />
                 </span>
-                <h1>Lista de alimentos</h1>
+                <div className="food-heading-copy">
+                  <span className="food-kicker">Control de inventario</span>
+                  <h1>Lista de alimentos</h1>
+                  <p>Organiza tus productos y revisa sus condiciones de conservación.</p>
+                </div>
               </div>
 
               <Button
                 type="button"
                 className="food-entry-btn"
-                label="Ingresar Alimento"
+                label="Ingresar alimento"
                 icon="pi pi-plus"
                 onClick={() => navigate("setup")}
               />
@@ -1521,13 +1254,6 @@ export default function App() {
                   onClick={() => setFoodFilter("frutas")}
                 >
                   Frutas y Verduras
-                </button>
-                <button
-                  type="button"
-                  className="filter-tab add-tab"
-                  aria-label="Agregar filtro"
-                >
-                  +
                 </button>
               </div>
 
