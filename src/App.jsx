@@ -85,11 +85,14 @@ function hasStoredSession() {
 }
 
 function formatDateForApi(value) {
-  if (!value) return new Date().toLocaleDateString("es-ES");
-  const date = new Date(value);
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("La fecha seleccionada no es válida.");
+  }
+  const year = date.getFullYear();
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${day}/${month}/${date.getFullYear()}`;
+  return `${year}-${month}-${day}`;
 }
 
 function formatApiError(response, data, fallback) {
