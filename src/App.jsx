@@ -13,6 +13,7 @@ const API_BASE = "https://api-tempgo-1.onrender.com/api";
 const categories = {
   refrigerados: {
     name: "Productos refrigerados",
+    filterLabel: "Refrigerados",
     ideal: "0°C - 4°C",
     min: "0°C",
     max: "4°C",
@@ -33,6 +34,7 @@ const categories = {
   },
   congelados: {
     name: "Productos congelados",
+    filterLabel: "Congelados",
     ideal: "-22°C - -18°C",
     min: "-22°C",
     max: "-18°C",
@@ -53,6 +55,7 @@ const categories = {
   },
   frutas: {
     name: "Frutas y verduras",
+    filterLabel: "Frutas y Verduras",
     ideal: "8°C - 12°C",
     min: "8°C",
     max: "12°C",
@@ -73,15 +76,24 @@ const categories = {
   },
 };
 
-let foodRowsCache = null;
-let foodRowsRequest = null;
-let foodRowsCacheVersion = 0;
+const foodRowsRequests = new Map();
+const foodFilters = [
+  { key: "todos", label: "Todos los Alimentos" },
+  ...Object.entries(categories).map(([key, { filterLabel }]) => ({
+    key,
+    label: filterLabel,
+  })),
+];
 
 function hasStoredSession() {
   return (
     localStorage.getItem("tempgo_authenticated") === "true" ||
     Boolean(localStorage.getItem("tempgo_token"))
   );
+}
+
+function invalidateFoodRowsRequests() {
+  foodRowsRequests.clear();
 }
 
 function useTimedReset(value, setValue, resetValue, delay) {
@@ -390,18 +402,17 @@ function normalizeFoodRecords(payload, categoryKey) {
   });
 }
 
-function invalidateFoodRowsCache() {
-  foodRowsCacheVersion += 1;
-  foodRowsCache = null;
-  foodRowsRequest = null;
-}
+function loadFoodRows(filter) {
+  if (filter !== "todos" && !categories[filter]) {
+    throw new Error("La categoría de alimentos seleccionada no es válida.");
+  }
+  if (foodRowsRequests.has(filter)) return foodRowsRequests.get(filter);
 
-function loadFoodRows() {
-  if (foodRowsCache) return Promise.resolve(foodRowsCache);
-  if (foodRowsRequest) return foodRowsRequest;
-
-  const requestVersion = foodRowsCacheVersion;
-  const requests = Object.entries(categories).map(
+  const selectedCategories =
+    filter === "todos"
+      ? Object.entries(categories)
+      : [[filter, categories[filter]]];
+  const requests = selectedCategories.map(
     async ([categoryKey, category]) => {
       const response = await fetch(`${API_BASE}/${category.endpoint}`);
       const data = await response.json().catch(() => {
@@ -421,7 +432,7 @@ function loadFoodRows() {
     },
   );
 
-  foodRowsRequest = Promise.allSettled(requests)
+  const request = Promise.allSettled(requests)
     .then((results) => {
       const rows = [];
       const errors = [];
@@ -437,19 +448,16 @@ function loadFoodRows() {
         }
       });
 
-      const result = { rows, errors };
-      if (!errors.length && requestVersion === foodRowsCacheVersion) {
-        foodRowsCache = result;
-      }
-      return result;
-    })
-    .finally(() => {
-      if (requestVersion === foodRowsCacheVersion) {
-        foodRowsRequest = null;
-      }
+      return { rows, errors };
     });
+  const trackedRequest = request.finally(() => {
+    if (foodRowsRequests.get(filter) === trackedRequest) {
+      foodRowsRequests.delete(filter);
+    }
+  });
+  foodRowsRequests.set(filter, trackedRequest);
 
-  return foodRowsRequest;
+  return trackedRequest;
 }
 
 export default function App() {
@@ -530,14 +538,13 @@ export default function App() {
     if (screen !== "food") return undefined;
 
     let active = true;
-    const hasCachedRows = Boolean(foodRowsCache);
-    setFoodLoading(!hasCachedRows);
-    if (!hasCachedRows) setFoodLoadError("");
+    setFoodRows([]);
+    setFoodLoading(true);
+    setFoodLoadError("");
 
-    loadFoodRows()
+    loadFoodRows(foodFilter)
       .then(({ rows, errors }) => {
         if (!active) return;
-        if (!errors.length) foodRowsCache = { rows, errors };
         setFoodRows(rows);
         setFoodLoadError(errors.join(" "));
       })
@@ -556,7 +563,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [screen]);
+  }, [screen, foodFilter]);
 
   useTimedReset(showSuccessOverlay, setShowSuccessOverlay, false, 2200);
   useTimedReset(foodSuccessMessage, setFoodSuccessMessage, "", 3000);
@@ -602,14 +609,12 @@ export default function App() {
   const searchQuery = foodSearch.trim().toLocaleLowerCase("es");
 
   const filteredFoodRows = foodRows.filter((row) => {
-    const matchesCategory =
-      foodFilter === "todos" || row.chip === foodFilter;
     const matchesSearch =
       !searchQuery ||
       `${row.id} ${row.name} ${row.subtitle}`
         .toLocaleLowerCase("es")
         .includes(searchQuery);
-    return matchesCategory && matchesSearch;
+    return matchesSearch;
   });
 
   const submitFood = async (event) => {
@@ -671,7 +676,7 @@ export default function App() {
         );
       }
 
-      invalidateFoodRowsCache();
+      invalidateFoodRowsRequests();
       setFoodSuccessMessage(
         `El alimento “${food.trim()}” se ingresó correctamente.`,
       );
@@ -687,7 +692,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    invalidateFoodRowsCache();
+    invalidateFoodRowsRequests();
     setFoodRows([]);
     setFoodLoadError("");
     localStorage.removeItem("tempgo_token");
@@ -1267,38 +1272,17 @@ export default function App() {
 
             <div className="food-toolbar">
               <div className="food-tabs">
-                <button
-                  type="button"
-                  className={`filter-tab ${foodFilter === "todos" ? "active" : ""}`}
-                  aria-pressed={foodFilter === "todos"}
-                  onClick={() => setFoodFilter("todos")}
-                >
-                  Todos los Alimentos
-                </button>
-                <button
-                  type="button"
-                  className={`filter-tab ${foodFilter === "refrigerados" ? "active" : ""}`}
-                  aria-pressed={foodFilter === "refrigerados"}
-                  onClick={() => setFoodFilter("refrigerados")}
-                >
-                  Refrigerados
-                </button>
-                <button
-                  type="button"
-                  className={`filter-tab ${foodFilter === "congelados" ? "active" : ""}`}
-                  aria-pressed={foodFilter === "congelados"}
-                  onClick={() => setFoodFilter("congelados")}
-                >
-                  Congelados
-                </button>
-                <button
-                  type="button"
-                  className={`filter-tab ${foodFilter === "frutas" ? "active" : ""}`}
-                  aria-pressed={foodFilter === "frutas"}
-                  onClick={() => setFoodFilter("frutas")}
-                >
-                  Frutas y Verduras
-                </button>
+                {foodFilters.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`filter-tab ${foodFilter === key ? "active" : ""}`}
+                    aria-pressed={foodFilter === key}
+                    onClick={() => setFoodFilter(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
 
               <div className="food-search">
@@ -1322,7 +1306,7 @@ export default function App() {
 
             <div className="food-table-panel">
               <div className="food-table-header">
-                <span>ID</span>
+                <span>N.º</span>
                 <span>ALIMENTO</span>
                 <span>TEMPERATURA</span>
                 <span>RANGO TÉRMICO</span>
@@ -1342,13 +1326,13 @@ export default function App() {
                 <div className="food-empty-state">
                   {foodRows.length
                     ? "No hay alimentos que coincidan con la búsqueda o el filtro."
-                    : "La API no devolvió alimentos registrados."}
+                    : "Aún no hay alimentos registrados. Cuando agregues uno, aparecerá aquí."}
                 </div>
               )}
 
-              {!foodLoading && filteredFoodRows.map((row) => (
+              {!foodLoading && filteredFoodRows.map((row, index) => (
                 <div key={row.key} className="food-table-row">
-                  <span className="food-id">{row.id}</span>
+                  <span className="food-id">{index + 1}</span>
                   <div className="food-name-cell">
                     <div className="food-avatar">
                       {row.chip === "refrigerados" && "🧊"}
