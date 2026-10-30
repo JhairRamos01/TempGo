@@ -98,10 +98,7 @@ function formatDateForApi(value) {
   if (Number.isNaN(date.getTime())) {
     throw new Error("La fecha seleccionada no es válida.");
   }
-  const year = date.getFullYear();
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return date.toISOString();
 }
 
 function formatApiError(response, data, fallback) {
@@ -1558,7 +1555,7 @@ export default function App() {
 
                   <label className="field-block">
                     <div className="field-row">
-                      <span className="field-label">Fecha :</span>
+                      <span className="field-label">Fecha y hora :</span>
                       <span className="today-tag">Hoy</span>
                     </div>
                     <div className="field-input-wrap with-icon">
@@ -1567,6 +1564,8 @@ export default function App() {
                         onChange={(e) => setDate(e.value)}
                         disabled={busy}
                         dateFormat="dd/mm/yy"
+                        showTime
+                        hourFormat="24"
                         showIcon
                         required
                       />
