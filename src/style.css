@@ -245,7 +245,7 @@ img {
   background: linear-gradient(90deg, #19c18a, #20a6f2);
   content: "";
   transform-origin: left;
-  animation: food-success-progress 4.5s linear both;
+  animation: food-success-progress 2.2s linear both;
 }
 
 @keyframes food-success-in {
