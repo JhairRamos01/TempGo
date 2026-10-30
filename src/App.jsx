@@ -616,6 +616,9 @@ export default function App() {
         .includes(searchQuery);
     return matchesSearch;
   });
+  const activeFoodFilterLabel =
+    foodFilters.find(({ key }) => key === foodFilter)?.label ?? "Alimentos";
+  const visibleFoodCount = filteredFoodRows.length;
 
   const submitFood = async (event) => {
     event.preventDefault();
@@ -1255,9 +1258,14 @@ export default function App() {
                   <i className="pi pi-list" />
                 </span>
                 <div className="food-heading-copy">
-                  <span className="food-kicker">Control de inventario</span>
+                  <span className="food-kicker">
+                    Control de inventario de los usuarios
+                  </span>
                   <h1>Lista de alimentos</h1>
-                  <p>Organiza tus productos y revisa sus condiciones de conservación.</p>
+                  <p>
+                    Registra tu producto para cuidar su conservación y descubre
+                    los alimentos que ya comparten otros usuarios.
+                  </p>
                 </div>
               </div>
 
@@ -1305,6 +1313,16 @@ export default function App() {
             )}
 
             <div className="food-table-panel">
+              <div className="food-table-summary">
+                <div>
+                  <strong>Inventario compartido</strong>
+                  <span>{activeFoodFilterLabel}</span>
+                </div>
+                <span className="food-visible-count">
+                  {visibleFoodCount}{" "}
+                  {visibleFoodCount === 1 ? "producto" : "productos"}
+                </span>
+              </div>
               <div className="food-table-header">
                 <span>N.º</span>
                 <span>ALIMENTO</span>
