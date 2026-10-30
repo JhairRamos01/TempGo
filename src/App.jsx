@@ -1369,10 +1369,9 @@ export default function App() {
                     <span className="temp-status">{row.status}</span>
                   </div>
                   <div className="range-cell">
-                    <span>{row.range}</span>
-                    <div className="range-bar">
-                      <span className={row.statusTone} />
-                    </div>
+                    <span className={`range-value ${row.statusTone}`}>
+                      {row.range}
+                    </span>
                   </div>
                   <div className="date-cell">
                     <span>{row.date}</span>

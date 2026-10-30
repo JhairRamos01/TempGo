@@ -1337,7 +1337,7 @@ label {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  min-width: 860px;
+  min-width: 800px;
   padding: 1rem 1.2rem;
   border-bottom: 1px solid rgba(148, 170, 203, 0.16);
 }
@@ -1372,12 +1372,12 @@ label {
 .food-table-row {
   display: grid;
   grid-template-columns:
-    48px minmax(210px, 1.8fr) minmax(170px, 1.3fr)
-    minmax(185px, 1.15fr) minmax(190px, 1.45fr);
+    44px minmax(190px, 1.5fr) minmax(155px, 1.2fr)
+    minmax(135px, 1fr) minmax(180px, 1.25fr);
   align-items: center;
-  gap: 0.8rem;
-  padding: 0 1.2rem;
-  min-width: 860px;
+  gap: 0.65rem;
+  padding: 0 1rem;
+  min-width: 800px;
 }
 
 .food-table-header {
@@ -1485,36 +1485,32 @@ label {
 .range-cell {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: #3d546d;
-  font-weight: 600;
   white-space: nowrap;
 }
 
-.range-bar {
-  position: relative;
-  flex: 0 0 60px;
-  width: 60px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(155, 173, 197, 0.2);
-  overflow: hidden;
+.range-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 120px;
+  min-height: 32px;
+  padding: 0.35rem 0.45rem;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.range-bar span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  display: block;
-  border-radius: 999px;
+.range-value.good,
+.range-value.fresh {
+  background: rgba(49, 197, 163, 0.1);
+  color: #0b8d7b;
 }
 
-.range-bar .good,
-.range-bar .fresh {
-  background: linear-gradient(90deg, #5ad4d0, #36b7e0);
-}
-
-.range-bar .cool {
-  background: linear-gradient(90deg, #1796e3, #1b6ce8);
+.range-value.cool {
+  background: rgba(62, 140, 255, 0.1);
+  color: #0e72d7;
 }
 
 .date-cell {
@@ -1617,9 +1613,18 @@ label {
 
 .app.dark .food-id,
 .app.dark .food-name-cell strong,
-.app.dark .range-cell,
+.app.dark .range-value,
 .app.dark .date-cell {
   color: #e4f0fb;
+}
+
+.app.dark .range-value.good,
+.app.dark .range-value.fresh {
+  background: rgba(49, 197, 163, 0.16);
+}
+
+.app.dark .range-value.cool {
+  background: rgba(62, 140, 255, 0.18);
 }
 
 .app.dark .food-name-cell small,
@@ -3317,23 +3322,14 @@ label {
   .food-table-summary,
   .food-table-header,
   .food-table-row {
-    min-width: 720px;
+    min-width: 700px;
   }
 
   .food-table-header,
   .food-table-row {
     grid-template-columns:
-      36px minmax(140px, 1.3fr) minmax(125px, 1fr)
-      minmax(165px, 1.1fr) minmax(145px, 1.2fr);
-  }
-
-  .range-cell {
-    gap: 0.35rem;
-  }
-
-  .range-bar {
-    flex-basis: 44px;
-    width: 44px;
+      36px minmax(135px, 1.3fr) minmax(125px, 1fr)
+      minmax(120px, 1fr) minmax(155px, 1.2fr);
   }
 }
 
