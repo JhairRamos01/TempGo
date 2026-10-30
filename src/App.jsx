@@ -84,6 +84,15 @@ function hasStoredSession() {
   );
 }
 
+function useTimedReset(value, setValue, resetValue, delay) {
+  useEffect(() => {
+    if (!value) return undefined;
+
+    const timeoutId = window.setTimeout(() => setValue(resetValue), delay);
+    return () => window.clearTimeout(timeoutId);
+  }, [value, setValue, resetValue, delay]);
+}
+
 function formatDateForApi(value) {
   const date = value ? new Date(value) : new Date();
   if (Number.isNaN(date.getTime())) {
@@ -552,25 +561,8 @@ export default function App() {
     };
   }, [screen]);
 
-  useEffect(() => {
-    if (!showSuccessOverlay) return undefined;
-
-    const timeoutId = window.setTimeout(
-      () => setShowSuccessOverlay(false),
-      2200,
-    );
-    return () => window.clearTimeout(timeoutId);
-  }, [showSuccessOverlay]);
-
-  useEffect(() => {
-    if (!foodSuccessMessage) return undefined;
-
-    const timeoutId = window.setTimeout(
-      () => setFoodSuccessMessage(""),
-      4500,
-    );
-    return () => window.clearTimeout(timeoutId);
-  }, [foodSuccessMessage]);
+  useTimedReset(showSuccessOverlay, setShowSuccessOverlay, false, 2200);
+  useTimedReset(foodSuccessMessage, setFoodSuccessMessage, "", 3000);
 
   const navigate = (nextScreen) => {
     const nextPath = screenPaths[nextScreen];
