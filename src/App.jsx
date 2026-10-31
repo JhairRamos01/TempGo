@@ -1100,9 +1100,7 @@ export default function App() {
                             "tempgo_remembered_email",
                             email.trim(),
                           );
-                        } else if (shouldRemember) {
-                          localStorage.removeItem("tempgo_remembered_email");
-                        } else if (!shouldRemember) {
+                        } else {
                           localStorage.removeItem("tempgo_remembered_email");
                         }
                       }}
@@ -1298,7 +1296,7 @@ export default function App() {
                 <InputText
                   value={foodSearch}
                   onChange={(event) => setFoodSearch(event.target.value)}
-                  placeholder="Buscar alimento o ID..."
+                  placeholder="Buscar un alimento ..."
                 />
               </div>
             </div>
