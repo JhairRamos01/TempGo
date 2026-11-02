@@ -58,24 +58,24 @@ const categories = {
     statusTone: "cool",
   },
   frutas: {
-    name: "Frutas y verduras",
-    filterLabel: "Frutas y Verduras",
-    ideal: "8°C - 12°C",
-    min: "8°C",
-    max: "12°C",
-    minValue: 8,
-    maxValue: 12,
-    low: "8°C",
-    idealLegend: "8 → 12°C",
-    high: "12°C",
-    temp: 9,
+    name: "Testeo",
+    filterLabel: "Testeo",
+    ideal: "28°C - 33°C",
+    min: "28°C",
+    max: "33°C",
+    minValue: 28,
+    maxValue: 33,
+    low: "28°C",
+    idealLegend: "28 → 33°C",
+    high: "33°C",
+    temp: 30,
     food: "Manzana",
     suggestions: ["Manzana", "Fresa", "Plátano"],
     image: "/img/imagen3.jpeg",
     endpoint: "verduras",
-    apiRange: "8°C a 12°C",
-    summary: "Cuidado de textura, humedad y conservación fresca",
-    status: "Fresco",
+    apiRange: "28°C a 33°C",
+    summary: "Prueba de conservación dentro del rango térmico establecido",
+    status: "Testeo",
     statusTone: "fresh",
   },
 };
@@ -172,7 +172,11 @@ function telemetryCategory(product) {
 
   if (normalized.includes("refriger")) return "refrigerados";
   if (normalized.includes("congel")) return "congelados";
-  if (normalized.includes("fruta") || normalized.includes("verdura")) {
+  if (
+    normalized.includes("testeo") ||
+    normalized.includes("fruta") ||
+    normalized.includes("verdura")
+  ) {
     return "frutas";
   }
   return categorize(product);
@@ -627,7 +631,7 @@ export default function App() {
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [food, setFood] = useState(categories.frutas.food);
-  const [temperature, setTemperature] = useState(10);
+  const [temperature, setTemperature] = useState(categories.frutas.temp);
   const [date, setDate] = useState(new Date());
   const [category, setCategory] = useState("frutas");
   const [theme, setTheme] = useState("light");
