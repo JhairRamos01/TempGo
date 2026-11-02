@@ -9,6 +9,10 @@ import { Card } from "primereact/card";
 import { Message } from "primereact/message";
 
 const API_BASE = "https://api-tempgo-1.onrender.com/api";
+const TELEMETRY_POLL_INTERVAL_MS = 2000;
+const TELEMETRY_STALE_AFTER_MS = 30000;
+const THERMAL_SCALE_MIN = -1000;
+const THERMAL_SCALE_MAX = 1000;
 
 const categories = {
   refrigerados: {
@@ -157,6 +161,149 @@ function categorize(food) {
   )
     return "refrigerados";
   return null;
+}
+
+function telemetryCategory(product) {
+  if (typeof product !== "string") return null;
+  const normalized = product
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (normalized.includes("refriger")) return "refrigerados";
+  if (normalized.includes("congel")) return "congelados";
+  if (normalized.includes("fruta") || normalized.includes("verdura")) {
+    return "frutas";
+  }
+  return categorize(product);
+}
+
+function normalizeArduinoReading(payload, categoryKey) {
+  const records = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.lecturas)
+        ? payload.lecturas
+        : payload && typeof payload === "object"
+          ? [payload]
+          : [];
+
+  const readings = records
+    .filter(
+      (record) =>
+        record &&
+        typeof record === "object" &&
+        telemetryCategory(record.producto) === categoryKey,
+    )
+    .map((record) => {
+      const rawTemperature = record.temperatura;
+      const temperature =
+        typeof rawTemperature === "number"
+          ? rawTemperature
+          : typeof rawTemperature === "string" && rawTemperature.trim()
+            ? Number(rawTemperature)
+            : Number.NaN;
+      const timestamp = new Date(record.fecha_creacion).getTime();
+      if (!Number.isFinite(temperature) || !Number.isFinite(timestamp)) {
+        return null;
+      }
+
+      return {
+        temperature,
+        timestamp,
+        categoryKey,
+        status:
+          typeof record.estado === "string"
+            ? record.estado.trim().toLocaleUpperCase("es")
+            : "",
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.timestamp - left.timestamp);
+
+  if (!readings.length) {
+    throw new Error(
+      `La API no devolvió lecturas válidas para ${categories[categoryKey].filterLabel.toLocaleLowerCase("es")}.`,
+    );
+  }
+  return readings[0];
+}
+
+function useArduinoTelemetry(enabled, categoryKey) {
+  const [reading, setReading] = useState(null);
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!enabled) {
+      setReading(null);
+      setError("");
+      setCurrentTime(Date.now());
+      return undefined;
+    }
+
+    let active = true;
+    let timeoutId;
+    setReading(null);
+    setError("");
+    setCurrentTime(Date.now());
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/lecturas`, {
+          cache: "no-store",
+        });
+        const data = await response.json().catch(() => {
+          throw new Error(
+            `La API de lecturas devolvió una respuesta inválida (HTTP ${response.status}).`,
+          );
+        });
+        if (!response.ok) {
+          throw new Error(
+            formatApiError(
+              response,
+              data,
+              "No se pudo consultar la temperatura del Arduino.",
+            ),
+          );
+        }
+
+        const nextReading = normalizeArduinoReading(data, categoryKey);
+        if (active) {
+          setReading(nextReading);
+          setError("");
+        }
+      } catch (requestError) {
+        if (active) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "No se pudo consultar la temperatura del Arduino.",
+          );
+        }
+      } finally {
+        if (active) {
+          setCurrentTime(Date.now());
+          timeoutId = window.setTimeout(poll, TELEMETRY_POLL_INTERVAL_MS);
+        }
+      }
+    };
+
+    poll();
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [enabled, categoryKey]);
+
+  const isRecent =
+    reading !== null &&
+    reading.categoryKey === categoryKey &&
+    currentTime - reading.timestamp >= -5000 &&
+    currentTime - reading.timestamp <= TELEMETRY_STALE_AFTER_MS;
+
+  return { reading, currentTime, error, isRecent };
 }
 
 const routes = {
@@ -503,6 +650,14 @@ export default function App() {
   const [foodLoadError, setFoodLoadError] = useState("");
   const [foodFilter, setFoodFilter] = useState("todos");
   const [foodSearch, setFoodSearch] = useState("");
+  const {
+    reading: arduinoReading,
+    error: telemetryLoadError,
+    isRecent: hasRecentArduinoReading,
+  } = useArduinoTelemetry(
+    screen === "setup" || screen === "product",
+    category,
+  );
   const currentMeta = screenMeta[screen] || screenMeta.login;
 
   useEffect(() => {
@@ -606,6 +761,39 @@ export default function App() {
   };
 
   const info = categories[category];
+  const isTemperatureOutOfRange =
+    hasRecentArduinoReading &&
+    (arduinoReading.temperature < info.minValue ||
+      arduinoReading.temperature > info.maxValue);
+  const hasArduinoReportedAlarm =
+    hasRecentArduinoReading && arduinoReading.status === "ALERTA";
+  const isConnectionAlert =
+    !hasRecentArduinoReading || hasArduinoReportedAlarm;
+  const isAlarmActive =
+    !hasRecentArduinoReading ||
+    isTemperatureOutOfRange ||
+    hasArduinoReportedAlarm;
+  const setupTemperature = hasRecentArduinoReading
+    ? arduinoReading.temperature
+    : temperature;
+  const setupTemperatureHasAlert =
+    hasRecentArduinoReading &&
+    (setupTemperature < info.minValue ||
+      setupTemperature > info.maxValue ||
+      hasArduinoReportedAlarm);
+  const thermalPointPosition = (value) =>
+    Math.min(
+      100,
+      Math.max(
+        0,
+        ((value - THERMAL_SCALE_MIN) /
+          (THERMAL_SCALE_MAX - THERMAL_SCALE_MIN)) *
+          100,
+      ),
+    );
+  const thermalSafeZoneStart = thermalPointPosition(info.minValue);
+  const thermalSafeZoneWidth =
+    thermalPointPosition(info.maxValue) - thermalSafeZoneStart;
   const searchQuery = foodSearch.trim().toLocaleLowerCase("es");
 
   const filteredFoodRows = foodRows.filter((row) => {
@@ -622,6 +810,9 @@ export default function App() {
 
   const submitFood = async (event) => {
     event.preventDefault();
+    const submittedTemperature = hasRecentArduinoReading
+      ? arduinoReading.temperature
+      : temperature;
     const selected = categorize(food.trim());
     if (!selected) {
       setMessage({
@@ -638,9 +829,10 @@ export default function App() {
       return;
     }
     if (
-      !Number.isFinite(temperature) ||
-      temperature < categories[category].minValue ||
-      temperature > categories[category].maxValue
+      !Number.isFinite(submittedTemperature) ||
+      (!hasRecentArduinoReading &&
+        (submittedTemperature < categories[category].minValue ||
+          submittedTemperature > categories[category].maxValue))
     ) {
       setMessage({
         severity: "warn",
@@ -660,7 +852,7 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             alimento_especifico: food.trim(),
-            temperatura: Number(temperature),
+            temperatura: Number(submittedTemperature),
             rango: categories[category].apiRange,
             fecha_creacion: formatDateForApi(date),
           }),
@@ -1441,6 +1633,14 @@ export default function App() {
                     <Message severity={message.severity} text={message.text} />
                   </div>
                 )}
+                {!hasRecentArduinoReading && telemetryLoadError && (
+                  <div className="login-message config-message">
+                    <Message
+                      severity="warn"
+                      text={`${telemetryLoadError} Se usará la temperatura manual.`}
+                    />
+                  </div>
+                )}
 
                 <form
                   onSubmit={submitFood}
@@ -1470,43 +1670,65 @@ export default function App() {
                         Temperatura (°C) :
                       </label>
                       <div className="temp-badge-group">
-                        <button
-                          type="button"
-                          className="temp-badge negative"
-                          onClick={() => adjustTemperature(-0.5)}
-                          disabled={busy || temperature <= info.minValue}
-                          aria-label="Disminuir temperatura en 0.5 grados"
+                        {!hasRecentArduinoReading && (
+                          <>
+                            <button
+                              type="button"
+                              className="temp-badge negative"
+                              onClick={() => adjustTemperature(-0.5)}
+                              disabled={busy || temperature <= info.minValue}
+                              aria-label="Disminuir temperatura en 0.5 grados"
+                            >
+                              -0.5
+                            </button>
+                            <button
+                              type="button"
+                              className="temp-badge positive"
+                              onClick={() => adjustTemperature(0.5)}
+                              disabled={busy || temperature >= info.maxValue}
+                              aria-label="Aumentar temperatura en 0.5 grados"
+                            >
+                              +0.5
+                            </button>
+                          </>
+                        )}
+                        <span
+                          className={`temp-badge status ${setupTemperatureHasAlert ? "alert" : ""}`}
                         >
-                          -0.5
-                        </button>
-                        <button
-                          type="button"
-                          className="temp-badge positive"
-                          onClick={() => adjustTemperature(0.5)}
-                          disabled={busy || temperature >= info.maxValue}
-                          aria-label="Aumentar temperatura en 0.5 grados"
-                        >
-                          +0.5
-                        </button>
-                        <span className="temp-badge status">
-                          Frescos Óptimo
+                          {hasRecentArduinoReading
+                            ? setupTemperatureHasAlert
+                              ? "ALERTA ARDUINO"
+                              : "ARDUINO EN VIVO"
+                            : "MODO MANUAL"}
                         </span>
                       </div>
                     </div>
                     <div className="field-input-wrap compact-value">
-                      <InputNumber
-                        inputId="temperature-input"
-                        value={temperature}
-                        onValueChange={(e) => {
-                          if (e.value !== null) setTemperature(e.value);
-                        }}
-                        disabled={busy}
-                        required
-                        min={info.minValue}
-                        max={info.maxValue}
-                        step={0.1}
-                      />
-                      <span className="unit">°C</span>
+                      {hasRecentArduinoReading ? (
+                        <output
+                          id="temperature-input"
+                          className="arduino-temperature-display"
+                          aria-live="polite"
+                        >
+                          {setupTemperature}°C
+                        </output>
+                      ) : (
+                        <>
+                          <InputNumber
+                            inputId="temperature-input"
+                            value={temperature}
+                            onValueChange={(e) => {
+                              if (e.value !== null) setTemperature(e.value);
+                            }}
+                            disabled={busy}
+                            required
+                            min={info.minValue}
+                            max={info.maxValue}
+                            step={0.1}
+                          />
+                          <span className="unit">°C</span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -1517,22 +1739,33 @@ export default function App() {
                       </span>
                     </div>
                     <div className="temperature-slider-wrap">
-                      <Slider
-                        value={temperature}
-                        onChange={(e) => {
-                          const nextTemperature = e.value;
-                          const nearestDegree = Math.round(nextTemperature);
-                          const snappedTemperature =
-                            Math.abs(nextTemperature - nearestDegree) <= 0.15
-                              ? nearestDegree
-                              : Number(nextTemperature.toFixed(1));
-                          setTemperature(snappedTemperature);
-                        }}
-                        disabled={busy}
-                        min={info.minValue}
-                        max={info.maxValue}
-                        step={0.1}
-                      />
+                      {hasRecentArduinoReading ? (
+                        <div
+                          className="arduino-reading-note"
+                          role="status"
+                          aria-live="polite"
+                        >
+                          <i className="pi pi-sync" aria-hidden="true" />
+                          Lectura recibida del Arduino; se guardará este valor.
+                        </div>
+                      ) : (
+                        <Slider
+                          value={temperature}
+                          onChange={(e) => {
+                            const nextTemperature = e.value;
+                            const nearestDegree = Math.round(nextTemperature);
+                            const snappedTemperature =
+                              Math.abs(nextTemperature - nearestDegree) <= 0.15
+                                ? nearestDegree
+                                : Number(nextTemperature.toFixed(1));
+                            setTemperature(snappedTemperature);
+                          }}
+                          disabled={busy}
+                          min={info.minValue}
+                          max={info.maxValue}
+                          step={0.1}
+                        />
+                      )}
                     </div>
                     <div className="range-values">
                       <span>Mínima: {info.min}</span>
@@ -1542,11 +1775,13 @@ export default function App() {
                       className="slider-current-value"
                       aria-live="polite"
                     >
-                      Temperatura seleccionada:{" "}
+                      {hasRecentArduinoReading
+                        ? "Temperatura del Arduino: "
+                        : "Temperatura manual: "}
                       <strong>
-                        {Number.isInteger(temperature)
-                          ? temperature
-                          : temperature.toFixed(1)}
+                        {Number.isInteger(setupTemperature)
+                          ? setupTemperature
+                          : setupTemperature.toFixed(1)}
                         °C
                       </strong>
                     </output>
@@ -1607,30 +1842,47 @@ export default function App() {
                     <div className="mini-panel">
                       <div className="mini-label">ENERGÍA</div>
                       <div className="mini-state-row">
-                        <span className="state-pill on">ENCENDIDO</span>
-                        <span className="state-pill off">APAGADO</span>
+                        <span
+                          className={`state-pill ${hasRecentArduinoReading ? "on" : "off"}`}
+                        >
+                          {hasRecentArduinoReading ? "ENCENDIDO" : "APAGADO"}
+                        </span>
                       </div>
                     </div>
 
                     <div className="mini-panel">
                       <div className="mini-label">ESTADO CONEXIÓN</div>
                       <div className="signal-line">
-                        <span className="signal-text">Señal 98%</span>
+                        <span className="signal-text">
+                          {hasRecentArduinoReading
+                            ? "Recibiendo datos del Arduino"
+                            : "Sin datos recientes del Arduino"}
+                        </span>
                       </div>
                       <div className="mini-state-row compact">
-                        <span className="state-pill success">ÓPTIMO</span>
-                        <span className="state-pill muted">ALERTA</span>
+                        <span
+                          className={`state-pill ${isConnectionAlert ? "muted" : "success"}`}
+                        >
+                          {isConnectionAlert ? "ALERTA" : "ÓPTIMO"}
+                        </span>
                       </div>
                     </div>
 
                     <div className="mini-panel temp-panel">
-                      <div className="mini-label">TEMPERATURA ACTUAL</div>
-                      <div className="temp-readout">{temperature}°C</div>
+                      <div className="mini-label">TEMPERATURA ACTUAL · ARDUINO</div>
+                      <div className="temp-readout">
+                        {hasRecentArduinoReading
+                          ? `${arduinoReading.temperature}°C`
+                          : "—"}
+                      </div>
                       <small className="temp-note">
-                        Estado{" "}
-                        {category === "congelados"
-                          ? "de congelación"
-                          : "estable"}
+                        {hasRecentArduinoReading
+                          ? `Lectura recibida ${new Intl.DateTimeFormat("es", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            }).format(arduinoReading.timestamp)}`
+                          : "Esperando una lectura del sensor"}
                       </small>
                     </div>
 
@@ -1666,7 +1918,11 @@ export default function App() {
                         <h1>{food || "Producto"}</h1>
                       </div>
                     </div>
-                    <div className="product-status-bubble">Rango Óptimo</div>
+                    <div
+                      className={`product-status-bubble ${isAlarmActive ? "alert" : ""}`}
+                    >
+                      {isAlarmActive ? "ALERTA" : "RANGO ÓPTIMO"}
+                    </div>
                   </div>
 
                   <div className="product-detail-body">
@@ -1678,44 +1934,66 @@ export default function App() {
                       <div className="thermal-header">
                         <span>CONTROL DE RANGO TÉRMICO</span>
                         <span className="thermal-zone">
-                          Zona actual · {temperature}°C
+                          {hasRecentArduinoReading
+                            ? `Arduino · ${arduinoReading.temperature}°C`
+                            : "Esperando datos del Arduino"}
                         </span>
                       </div>
 
                       <div className="thermal-bar">
                         <span
-                          className="thermal-point"
+                          className="thermal-safe-zone"
                           style={{
-                            left: `${Math.min(
-                              100,
-                              Math.max(
-                                0,
-                                ((temperature - info.minValue) /
-                                  (info.maxValue - info.minValue)) *
-                                  100,
-                              ),
-                            )}%`,
+                            left: `${thermalSafeZoneStart}%`,
+                            width: `max(4px, ${thermalSafeZoneWidth}%)`,
                           }}
                         />
+                        {hasRecentArduinoReading && (
+                          <span
+                            className="thermal-point"
+                            style={{
+                              left: `${thermalPointPosition(arduinoReading.temperature)}%`,
+                            }}
+                          />
+                        )}
                       </div>
 
                       <div className="thermal-scale">
-                        <span>{info.min}</span>
-                        <span>{info.low}</span>
-                        <span>{info.idealLegend}</span>
-                        <span>{info.high}</span>
-                        <span>{info.max}</span>
+                        <span>{THERMAL_SCALE_MIN}°C</span>
+                        <span>0°C</span>
+                        <span>+{THERMAL_SCALE_MAX}°C</span>
                       </div>
+                      <p className="thermal-limits">
+                        Rango fijo: <strong>{info.min} a {info.max}</strong>
+                        {" · "}
+                        Alarma activa fuera de estos límites.
+                      </p>
                     </div>
 
-                    <div className="alarm-bar">
+                    <div
+                      className={`alarm-bar ${isAlarmActive ? "active" : ""}`}
+                      role="status"
+                      aria-live="polite"
+                    >
                       <div className="alarm-copy">
-                        <span className="alarm-icon">✓</span>
+                        <span className="alarm-icon">
+                          {isAlarmActive ? "!" : "✓"}
+                        </span>
                         <div>
-                          <strong>SISTEMA DE ALARMA</strong>
+                          <strong>
+                            {isAlarmActive
+                              ? "SISTEMA DE ALARMA ACTIVO"
+                              : "SISTEMA DE ALARMA"}
+                          </strong>
                           <p>
-                            Sin incidentes térmicos registrados en las últimas
-                            24 horas.
+                            {!hasRecentArduinoReading
+                              ? telemetryLoadError ||
+                                "Sin comunicación reciente con el Arduino. La alarma permanece activa."
+                              : isTemperatureOutOfRange
+                                ? `Temperatura fuera del rango fijo (${info.min} a ${info.max}).`
+                                : hasArduinoReportedAlarm
+                                  ? "El Arduino reporta una condición de alerta."
+                                  : "Temperatura dentro del rango fijo de conservación."}
                           </p>
                         </div>
                       </div>

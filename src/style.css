@@ -1489,6 +1489,8 @@ label {
 }
 
 .range-value {
+  --range-value-background: rgba(49, 197, 163, 0.1);
+  --range-value-color: #0b8d7b;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1499,18 +1501,14 @@ label {
   border-radius: 10px;
   font-size: 0.86rem;
   font-weight: 700;
+  background: var(--range-value-background);
+  color: var(--range-value-color);
   white-space: nowrap;
 }
 
-.range-value.good,
-.range-value.fresh {
-  background: rgba(49, 197, 163, 0.1);
-  color: #0b8d7b;
-}
-
 .range-value.cool {
-  background: rgba(62, 140, 255, 0.1);
-  color: #0e72d7;
+  --range-value-background: rgba(62, 140, 255, 0.1);
+  --range-value-color: #0e72d7;
 }
 
 .date-cell {
@@ -1618,13 +1616,12 @@ label {
   color: #e4f0fb;
 }
 
-.app.dark .range-value.good,
-.app.dark .range-value.fresh {
-  background: rgba(49, 197, 163, 0.16);
+.app.dark .range-value {
+  --range-value-background: rgba(49, 197, 163, 0.16);
 }
 
 .app.dark .range-value.cool {
-  background: rgba(62, 140, 255, 0.18);
+  --range-value-background: rgba(62, 140, 255, 0.18);
 }
 
 .app.dark .food-name-cell small,
@@ -2227,6 +2224,39 @@ label {
   color: #0e9978;
 }
 
+.temp-badge.status.alert {
+  background: rgba(220, 76, 62, 0.12);
+  color: #bc3e31;
+}
+
+.arduino-temperature-display {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 0.65rem 2.3rem 0.65rem 0.8rem;
+  border: 1px solid rgba(26, 151, 241, 0.25);
+  border-radius: 12px;
+  background: rgba(26, 151, 241, 0.07);
+  color: #1678bd;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.arduino-reading-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 38px;
+  color: #1678bd;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.arduino-reading-note i {
+  color: #0e9978;
+}
+
 .range-values {
   display: flex;
   justify-content: space-between;
@@ -2331,6 +2361,21 @@ label {
 .app.dark .config-screen .panel-title-with-icon,
 .app.dark .config-screen .field-label {
   color: #e5f2ff;
+}
+
+.app.dark .config-screen .arduino-temperature-display {
+  border-color: rgba(67, 167, 245, 0.34);
+  background: rgba(26, 151, 241, 0.15);
+  color: #8ecaff;
+}
+
+.app.dark .config-screen .arduino-reading-note {
+  color: #a9c2d7;
+}
+
+.app.dark .config-screen .temp-badge.status.alert {
+  background: rgba(220, 76, 62, 0.2);
+  color: #ff9a8d;
 }
 
 .app.dark .config-screen .range-panel-header {
@@ -2941,6 +2986,11 @@ label {
   text-transform: uppercase;
 }
 
+.product-status-bubble.alert {
+  background: rgba(232, 93, 79, 0.13);
+  color: #bc3e31;
+}
+
 .product-detail-body {
   display: flex;
   flex-direction: column;
@@ -3005,6 +3055,7 @@ label {
 
 .thermal-point {
   position: absolute;
+  z-index: 2;
   top: 50%;
   width: 20px;
   height: 20px;
@@ -3016,15 +3067,36 @@ label {
   transition: left 0.25s ease;
 }
 
+.thermal-safe-zone {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 0 0 1px rgba(20, 47, 77, 0.18);
+}
+
 .thermal-scale {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
+  justify-content: space-between;
   gap: 0.5rem;
   margin-top: 0.75rem;
   color: #5f7590;
   font-size: 0.7rem;
   font-weight: 700;
-  text-align: center;
+}
+
+.thermal-limits {
+  margin: 0.7rem 0 0;
+  color: #5f7590;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.thermal-limits strong {
+  color: #365e87;
 }
 
 .alarm-bar {
@@ -3037,6 +3109,11 @@ label {
   border-radius: 19px;
   padding: 1rem 1.1rem;
   box-shadow: 0 5px 16px rgba(24, 55, 91, 0.035);
+}
+
+.alarm-bar.active {
+  border-color: rgba(220, 76, 62, 0.3);
+  background: rgba(255, 243, 241, 0.9);
 }
 
 .alarm-copy {
@@ -3056,6 +3133,11 @@ label {
   color: #0d9d62;
   font-size: 0.95rem;
   font-weight: 900;
+}
+
+.alarm-bar.active .alarm-icon {
+  background: rgba(220, 76, 62, 0.14);
+  color: #bc3e31;
 }
 
 .alarm-copy strong {
@@ -3180,6 +3262,35 @@ label {
   color: #7ce2bd;
 }
 
+.app.dark .product-status-bubble.alert {
+  border-color: rgba(248, 113, 99, 0.28);
+  background: rgba(220, 76, 62, 0.2);
+  color: #ff9a8d;
+}
+
+.app.dark .thermal-limits {
+  color: #a9c2d7;
+}
+
+.app.dark .thermal-limits strong {
+  color: #84c8f1;
+}
+
+.app.dark .thermal-safe-zone {
+  border-color: rgba(231, 245, 255, 0.9);
+  background: rgba(231, 245, 255, 0.58);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.app.dark .alarm-bar.active {
+  border-color: rgba(248, 113, 99, 0.3);
+  background: linear-gradient(
+    145deg,
+    rgba(99, 44, 49, 0.72),
+    rgba(64, 34, 43, 0.84)
+  );
+}
+
 .app.dark .product-headline-icon {
   border-color: rgba(194, 226, 249, 0.32);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
@@ -3215,6 +3326,12 @@ label {
   border: 1px solid rgba(73, 211, 163, 0.2);
   background: rgba(39, 194, 136, 0.18);
   color: #78e4bf;
+}
+
+.app.dark .alarm-bar.active .alarm-icon {
+  border-color: rgba(248, 113, 99, 0.28);
+  background: rgba(220, 76, 62, 0.22);
+  color: #ff9a8d;
 }
 
 .app.dark .alarm-actions button {
