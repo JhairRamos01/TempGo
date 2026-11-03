@@ -173,6 +173,7 @@ function telemetryCategory(product) {
   if (normalized.includes("refriger")) return "refrigerados";
   if (normalized.includes("congel")) return "congelados";
   if (
+    normalized.includes("prueba") ||
     normalized.includes("testeo") ||
     normalized.includes("fruta") ||
     normalized.includes("verdura")
@@ -180,6 +181,50 @@ function telemetryCategory(product) {
     return "frutas";
   }
   return categorize(product);
+}
+
+function arduinoProductLabel(product) {
+  if (typeof product !== "string") return "Producto";
+  const normalized = product
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (normalized.includes("prueba") || normalized.includes("testeo")) {
+    return "Prueba";
+  }
+  if (normalized.includes("fruta") || normalized.includes("verdura")) {
+    return "Frutas y verduras";
+  }
+  if (normalized.includes("refriger")) return "Refrigerados";
+  if (normalized.includes("congel")) return "Congelados";
+  return product;
+}
+
+function arduinoTemperatureRange(record, categoryKey) {
+  const minimum = Number(record.tempMin ?? record.temp_min);
+  const maximum = Number(record.tempMax ?? record.temp_max);
+  if (
+    Number.isFinite(minimum) &&
+    Number.isFinite(maximum) &&
+    minimum <= maximum
+  ) {
+    return { minimum, maximum };
+  }
+
+  const product = String(record.producto || "")
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (product.includes("prueba")) return { minimum: 29, maximum: 31 };
+  if (product.includes("fruta") || product.includes("verdura")) {
+    return { minimum: 8, maximum: 12 };
+  }
+  if (product.includes("refriger")) return { minimum: 0, maximum: 4 };
+  return {
+    minimum: categories[categoryKey].minValue,
+    maximum: categories[categoryKey].maxValue,
+  };
 }
 
 function normalizeArduinoReading(payload, categoryKey) {
@@ -217,6 +262,10 @@ function normalizeArduinoReading(payload, categoryKey) {
         temperature,
         timestamp,
         categoryKey,
+        product: record.producto,
+        productLabel: arduinoProductLabel(record.producto),
+        profile: record.perfil ?? null,
+        ...arduinoTemperatureRange(record, categoryKey),
         status:
           typeof record.estado === "string"
             ? record.estado.trim().toLocaleUpperCase("es")
@@ -765,10 +814,16 @@ export default function App() {
   };
 
   const info = categories[category];
+  const arduinoMinimum = hasRecentArduinoReading
+    ? arduinoReading.minimum
+    : info.minValue;
+  const arduinoMaximum = hasRecentArduinoReading
+    ? arduinoReading.maximum
+    : info.maxValue;
   const isTemperatureOutOfRange =
     hasRecentArduinoReading &&
-    (arduinoReading.temperature < info.minValue ||
-      arduinoReading.temperature > info.maxValue);
+    (arduinoReading.temperature < arduinoMinimum ||
+      arduinoReading.temperature > arduinoMaximum);
   const hasArduinoReportedAlarm =
     hasRecentArduinoReading && arduinoReading.status === "ALERTA";
   const isConnectionAlert =
@@ -782,8 +837,8 @@ export default function App() {
     : temperature;
   const setupTemperatureHasAlert =
     hasRecentArduinoReading &&
-    (setupTemperature < info.minValue ||
-      setupTemperature > info.maxValue ||
+    (setupTemperature < arduinoMinimum ||
+      setupTemperature > arduinoMaximum ||
       hasArduinoReportedAlarm);
   const thermalPointPosition = (value) =>
     Math.min(
@@ -795,9 +850,9 @@ export default function App() {
           100,
       ),
     );
-  const thermalSafeZoneStart = thermalPointPosition(info.minValue);
+  const thermalSafeZoneStart = thermalPointPosition(arduinoMinimum);
   const thermalSafeZoneWidth =
-    thermalPointPosition(info.maxValue) - thermalSafeZoneStart;
+    thermalPointPosition(arduinoMaximum) - thermalSafeZoneStart;
   const searchQuery = foodSearch.trim().toLocaleLowerCase("es");
 
   const filteredFoodRows = foodRows.filter((row) => {
@@ -1896,11 +1951,23 @@ export default function App() {
                         <img
                           className="registered-icon"
                           src={info.image}
-                          alt={food || "Alimento registrado"}
+                          alt={
+                            hasRecentArduinoReading
+                              ? arduinoReading.productLabel
+                              : food || "Alimento registrado"
+                          }
                         />
                         <div>
-                          <strong>{food || "Producto"}</strong>
-                          <small>{info.name}</small>
+                          <strong>
+                            {hasRecentArduinoReading
+                              ? arduinoReading.productLabel
+                              : food || "Producto"}
+                          </strong>
+                          <small>
+                            {hasRecentArduinoReading && arduinoReading.profile
+                              ? `Perfil Arduino ${arduinoReading.profile}`
+                              : info.name}
+                          </small>
                         </div>
                       </div>
                     </div>
@@ -1913,13 +1980,23 @@ export default function App() {
                       <img
                         className="product-headline-icon"
                         src={info.image}
-                        alt={food || "Alimento"}
+                        alt={
+                          hasRecentArduinoReading
+                            ? arduinoReading.productLabel
+                            : food || "Alimento"
+                        }
                       />
                       <div>
                         <span className="product-kicker">
-                          {info.name}
+                          {hasRecentArduinoReading
+                            ? `Perfil Arduino ${arduinoReading.profile || ""}`.trim()
+                            : info.name}
                         </span>
-                        <h1>{food || "Producto"}</h1>
+                        <h1>
+                          {hasRecentArduinoReading
+                            ? arduinoReading.productLabel
+                            : food || "Producto"}
+                        </h1>
                       </div>
                     </div>
                     <div
@@ -1968,7 +2045,12 @@ export default function App() {
                         <span>+{THERMAL_SCALE_MAX}°C</span>
                       </div>
                       <p className="thermal-limits">
-                        Rango fijo: <strong>{info.min} a {info.max}</strong>
+                        {hasRecentArduinoReading
+                          ? "Rango fijo del Arduino: "
+                          : "Rango configurado: "}
+                        <strong>
+                          {arduinoMinimum}°C a {arduinoMaximum}°C
+                        </strong>
                         {" · "}
                         Alarma activa fuera de estos límites.
                       </p>
@@ -1994,7 +2076,7 @@ export default function App() {
                               ? telemetryLoadError ||
                                 "Sin comunicación reciente con el Arduino. La alarma permanece activa."
                               : isTemperatureOutOfRange
-                                ? `Temperatura fuera del rango fijo (${info.min} a ${info.max}).`
+                                ? `Temperatura fuera del rango fijo (${arduinoMinimum}°C a ${arduinoMaximum}°C).`
                                 : hasArduinoReportedAlarm
                                   ? "El Arduino reporta una condición de alerta."
                                   : "Temperatura dentro del rango fijo de conservación."}
