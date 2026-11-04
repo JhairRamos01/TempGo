@@ -3153,33 +3153,6 @@ label {
   font-size: 0.82rem;
 }
 
-.alarm-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-.alarm-actions button {
-  border: 1px solid rgba(123, 146, 177, 0.2);
-  background: rgba(245, 249, 255, 0.86);
-  border-radius: 10px;
-  padding: 0.55rem 0.75rem;
-  color: #48657f;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.alarm-actions button:hover {
-  transform: translateY(-1px);
-  background: #fff;
-  border-color: rgba(45, 140, 255, 0.35);
-}
-
 .app.dark .product-shell {
   border-color: rgba(135, 190, 226, 0.16);
   background:
@@ -3334,17 +3307,6 @@ label {
   color: #ff9a8d;
 }
 
-.app.dark .alarm-actions button {
-  border-color: rgba(136, 183, 215, 0.18);
-  background: rgba(22, 58, 82, 0.86);
-  color: #c5d9e9;
-}
-
-.app.dark .alarm-actions button:hover {
-  border-color: rgba(78, 173, 231, 0.45);
-  background: rgba(30, 78, 108, 0.96);
-}
-
 .product-actions-row {
   display: flex;
   gap: 0.75rem;
@@ -3381,9 +3343,6 @@ label {
     flex-direction: column;
   }
 
-  .alarm-actions {
-    justify-content: flex-start;
-  }
 }
 
 @media (max-width: 760px) {
