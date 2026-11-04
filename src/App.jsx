@@ -814,12 +814,15 @@ export default function App() {
   };
 
   const info = categories[category];
-  const arduinoMinimum = hasRecentArduinoReading
-    ? arduinoReading.minimum
-    : info.minValue;
-  const arduinoMaximum = hasRecentArduinoReading
-    ? arduinoReading.maximum
-    : info.maxValue;
+  const useConfiguredCategoryRange = category === "frutas";
+  const arduinoMinimum =
+    hasRecentArduinoReading && !useConfiguredCategoryRange
+      ? arduinoReading.minimum
+      : info.minValue;
+  const arduinoMaximum =
+    hasRecentArduinoReading && !useConfiguredCategoryRange
+      ? arduinoReading.maximum
+      : info.maxValue;
   const isTemperatureOutOfRange =
     hasRecentArduinoReading &&
     (arduinoReading.temperature < arduinoMinimum ||
@@ -2045,7 +2048,7 @@ export default function App() {
                         <span>+{THERMAL_SCALE_MAX}°C</span>
                       </div>
                       <p className="thermal-limits">
-                        {hasRecentArduinoReading
+                        {hasRecentArduinoReading && !useConfiguredCategoryRange
                           ? "Rango fijo del Arduino: "
                           : "Rango configurado: "}
                         <strong>
