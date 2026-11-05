@@ -90,10 +90,16 @@ const foodFilters = [
 ];
 
 function hasStoredSession() {
-  return (
-    localStorage.getItem("tempgo_authenticated") === "true" ||
-    Boolean(localStorage.getItem("tempgo_token"))
-  );
+  return Boolean(localStorage.getItem("tempgo_token")?.trim());
+}
+
+function storeAuthenticatedSession(data) {
+  const token = typeof data?.token === "string" ? data.token.trim() : "";
+  if (!token) {
+    throw new Error("La API no devolvió un token de sesión válido.");
+  }
+  localStorage.setItem("tempgo_token", token);
+  localStorage.setItem("tempgo_authenticated", "true");
 }
 
 function invalidateFoodRowsRequests() {
@@ -990,7 +996,7 @@ export default function App() {
 
     setBusy(true);
     try {
-      const response = await fetch(`${API_BASE}/usuarios`, {
+      const response = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1008,8 +1014,7 @@ export default function App() {
         );
       }
 
-      localStorage.setItem("tempgo_token", data.token || "");
-      localStorage.setItem("tempgo_authenticated", "true");
+      storeAuthenticatedSession(data);
       setIsAuthenticated(true);
       saveUserProfile(registerEmail, registerName);
       setEmail(registerEmail.trim());
@@ -1055,8 +1060,7 @@ export default function App() {
         );
       }
 
-      localStorage.setItem("tempgo_token", data.token || "");
-      localStorage.setItem("tempgo_authenticated", "true");
+      storeAuthenticatedSession(data);
       setIsAuthenticated(true);
       saveUserProfile(
         email,
