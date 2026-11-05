@@ -2861,6 +2861,11 @@ label {
   background: rgba(39, 194, 111, 0.12);
 }
 
+.state-pill.alert {
+  color: #bc3e31;
+  background: rgba(232, 93, 79, 0.13);
+}
+
 .state-pill.muted {
   background: rgba(130, 143, 163, 0.1);
   color: #4b6079;
@@ -3279,6 +3284,12 @@ label {
   border: 1px solid rgba(153, 183, 207, 0.12);
   background: rgba(114, 146, 171, 0.14);
   color: #b4c8d9;
+}
+
+.app.dark .state-pill.alert {
+  border: 1px solid rgba(248, 113, 99, 0.28);
+  background: rgba(220, 76, 62, 0.2);
+  color: #ff9a8d;
 }
 
 .app.dark .thermal-bar {

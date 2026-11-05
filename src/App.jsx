@@ -810,7 +810,9 @@ export default function App() {
   const hasArduinoReportedAlarm =
     hasRecentArduinoReading && arduinoReading.status === "ALERTA";
   const isConnectionAlert =
-    !hasRecentArduinoReading || hasArduinoReportedAlarm;
+    !hasRecentArduinoReading ||
+    isTemperatureOutOfRange ||
+    hasArduinoReportedAlarm;
   const isAlarmActive =
     !hasRecentArduinoReading ||
     isTemperatureOutOfRange ||
@@ -1903,7 +1905,13 @@ export default function App() {
                       </div>
                       <div className="mini-state-row compact">
                         <span
-                          className={`state-pill ${isConnectionAlert ? "muted" : "success"}`}
+                          className={`state-pill ${
+                            !hasRecentArduinoReading
+                              ? "muted"
+                              : isConnectionAlert
+                                ? "alert"
+                                : "success"
+                          }`}
                         >
                           {isConnectionAlert ? "ALERTA" : "ÓPTIMO"}
                         </span>
@@ -2023,34 +2031,33 @@ export default function App() {
                       </p>
                     </div>
 
-                    <div
-                      className={`alarm-bar ${isAlarmActive ? "active" : ""}`}
-                      role="status"
-                      aria-live="polite"
-                    >
-                      <div className="alarm-copy">
-                        <span className="alarm-icon">
-                          {isAlarmActive ? "!" : "✓"}
-                        </span>
-                        <div>
-                          <strong>
-                            {isAlarmActive
-                              ? "SISTEMA DE ALARMA ACTIVO"
-                              : "SISTEMA DE ALARMA"}
-                          </strong>
-                          <p>
-                            {!hasRecentArduinoReading
-                              ? telemetryLoadError ||
-                                "Sin comunicación reciente con el Arduino. La alarma permanece activa."
-                              : isTemperatureOutOfRange
+                    {hasRecentArduinoReading && (
+                      <div
+                        className={`alarm-bar ${isAlarmActive ? "active" : ""}`}
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <div className="alarm-copy">
+                          <span className="alarm-icon">
+                            {isAlarmActive ? "!" : "✓"}
+                          </span>
+                          <div>
+                            <strong>
+                              {isAlarmActive
+                                ? "SISTEMA DE ALARMA ACTIVO"
+                                : "SISTEMA DE ALARMA"}
+                            </strong>
+                            <p>
+                              {isTemperatureOutOfRange
                                 ? `Temperatura fuera del rango fijo (${arduinoMinimum}°C a ${arduinoMaximum}°C).`
                                 : hasArduinoReportedAlarm
                                   ? "El Arduino reporta una condición de alerta."
                                   : "Temperatura dentro del rango fijo de conservación."}
-                          </p>
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                   </div>
                 </div>
